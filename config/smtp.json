@@ -4,7 +4,7 @@
   "TLS": {
     "enabled": false,
     "port": 587,
-    "cert": "www.shaoxin.top",
-    "key": "www.shaoxin.top"
+    "cert": "",
+    "key": ""
   }
 }
