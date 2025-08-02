@@ -1,0 +1,862 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 全局滚动条样式 */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.5;
+}
+
+.email-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 顶部导航栏 */
+.header {
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0 20px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* 空白头部区域 */
+.two {
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    height: 45px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+
+
+.title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1976d2;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.user-profile:hover {
+    background-color: #f0f0f0;
+}
+
+.username {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dropdown-arrow {
+    font-size: 12px;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.user-profile.active .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    min-width: 120px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-item {
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background-color: #f5f5f5;
+}
+
+.dropdown-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.dropdown-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+/* 主要内容区域 */
+.main-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* 左侧边栏 */
+.sidebar {
+    width: 10%;
+    min-width: 200px;
+    background: white;
+    border-right: 1px solid #e0e0e0;
+    padding: 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: width 0.3s ease, padding 0.3s ease;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* 折叠状态的sidebar */
+.sidebar.collapsed {
+    width: 60px;
+    min-width: 60px;
+    padding: 20px 8px;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+/* 当sidebar折叠时，调整其他区域的宽度 */
+.sidebar.collapsed ~ .navigation {
+    width: 15%;
+}
+
+.sidebar.collapsed ~ .navigation ~ .email-items {
+    width: 85%;
+}
+
+/* 平板设备优化 */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .sidebar {
+        width: 12%;
+        min-width: 180px;
+    }
+    
+    .navigation {
+        width: 12%;
+        min-width: 180px;
+    }
+    
+    .email-items {
+        width: 76%;
+    }
+    
+    /* 平板上sidebar折叠时的调整 */
+    .sidebar.collapsed ~ .navigation {
+        width: 18%;
+    }
+    
+    .sidebar.collapsed ~ .navigation ~ .email-items {
+        width: 82%;
+    }
+}
+
+/* 横屏平板设备优化 (宽度大于1024px但高度较小) */
+@media (min-width: 1025px) and (max-height: 800px) {
+    .sidebar {
+        width: 10%;
+        min-width: 160px;
+    }
+    
+    .navigation {
+        width: 15%;
+        min-width: 180px;
+    }
+    
+    .email-items {
+        width: 75%;
+    }
+    
+    /* 确保导航文字在横屏平板上显示 */
+    .nav-text {
+        display: block !important;
+    }
+    
+    .section-title {
+        display: block !important;
+    }
+    
+    .nav-count {
+        display: block !important;
+    }
+}
+
+/* 手机设备优化 */
+@media (max-width: 767px) {
+    .sidebar {
+        width: 60px;
+        min-width: 60px;
+        padding: 10px 5px;
+    }
+    
+    .sidebar:not(.collapsed) {
+        width: 200px;
+        min-width: 200px;
+        padding: 20px;
+    }
+    
+    .navigation {
+        width: 25%;
+        min-width: 150px;
+    }
+    
+    .email-items {
+        width: 75%;
+    }
+    
+    /* 手机上sidebar展开时的调整 */
+    .sidebar:not(.collapsed) ~ .navigation {
+        width: 20%;
+    }
+    
+    .sidebar:not(.collapsed) ~ .navigation ~ .email-items {
+        width: 60%;
+    }
+}
+
+/* 折叠状态下隐藏文字 */
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .section-title,
+.sidebar.collapsed .nav-count {
+    display: none;
+}
+
+/* 折叠状态下的nav-item样式 */
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 8px;
+    margin-bottom: 4px;
+}
+
+/* 折叠状态下的图标样式 */
+.sidebar.collapsed .nav-item .nav-item-icon {
+    margin-right: 0;
+    width: 18px;
+    height: 18px;
+}
+
+.sidebar.collapsed .nav-item .nav-item-icon::before {
+    width: 18px;
+    height: 18px;
+}
+
+/* 折叠按钮 */
+.sidebar-toggle {
+    position: absolute;
+    top: 10px;
+    right: -12px;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    z-index: 100;
+    transition: transform 0.3s ease;
+}
+
+/* Sidebar底部版权信息 */
+.sidebar-footer {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    padding: 0 20px;
+    text-align: center;
+}
+
+.copyright-link {
+    font-size: 12px;
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.copyright-link:hover {
+    color: #1976d2;
+    text-decoration: underline;
+}
+
+/* 折叠状态下隐藏版权信息 */
+.sidebar.collapsed .sidebar-footer {
+    display: none;
+}
+
+@media (max-width: 767px) {
+    .sidebar:not(.collapsed) .sidebar-footer {
+        display: block;
+    }
+}
+
+.sidebar-toggle:hover {
+    background: #f5f5f5;
+}
+
+.sidebar.collapsed .sidebar-toggle {
+    transform: rotate(180deg);
+}
+
+/* 邮件导航区域 */
+.navigation {
+    width: 10%;
+    min-width: 200px;
+    background: white;
+    border-right: 1px solid #e0e0e0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 导航头部 - 固定不滚动 */
+.navigation-header {
+    padding: 5px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background: #fafafa;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.navigation-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+/* 导航内容区域 - 可滚动 */
+.navigation-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* 自定义滚动条样式 */
+.navigation-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.navigation-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.navigation-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.navigation-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* navigation中的空状态样式 */
+.navigation-content .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #666;
+    text-align: center;
+}
+
+.navigation-content .empty-text {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.navigation-content .empty-subtext {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.compose-btn {
+    background: #1976d2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.compose-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.compose-icon::before {
+    content: "";
+    display: block;
+    width: 16px;
+    height: 16px;
+    background-image: var(--icon-newly);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.compose-btn:hover {
+    background: #1565c0;
+}
+
+.action-btn {
+    background: white;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 8px;
+}
+
+.action-btn:hover {
+    background: #f0f0f0;
+}
+
+
+
+.mark-icon, .pin-icon, .delete-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    margin-right: 4px;
+}
+
+.mark-icon svg, .pin-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+/* 添加分隔符样式 */
+.ribbon-divider-wrapper {
+    display: flex;
+    align-items: center;
+    margin: 0 8px;
+}
+
+.ribbon-bottom-bar-divider {
+    width: 1px;
+    height: 20px;
+    background-color: #e0e0e0;
+    border-radius: 0.5px;
+}
+
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.nav-section {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+    gap: 8px;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.nav-item-icon {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nav-item-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+.nav-item:hover {
+    background-color: #f5f5f5;
+}
+
+.nav-item.active {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    font-weight: 500;
+}
+
+
+
+.nav-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nav-count {
+    background-color: #1976d2;
+    color: white;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 2px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+    margin-left: 8px;
+}
+
+/* 新邮件通知样式 */
+.new-mail-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    min-width: 300px;
+    max-width: 400px;
+    z-index: 1000;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.notification-content {
+    margin-right: 20px;
+}
+
+.notification-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1976d2;
+    margin-bottom: 8px;
+}
+
+.notification-from,
+.notification-subject {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.notification-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.notification-close:hover {
+    background-color: #f0f0f0;
+    color: #666;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* 图标样式通过JavaScript动态注入 */
+.sidebar .nav-item .nav-item-icon {
+    margin-right: 0;
+}
+
+/* 新邮件编辑器样式 */
+.compose-form {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.compose-field {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 收件人、抄送、密送、主题字段水平布局 */
+.compose-to-field,
+.compose-cc-field,
+.compose-bcc-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+}
+
+/* 主题字段水平布局 */
+.compose-field:not(.compose-content-field) {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+}
+
+.compose-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+/* 收件人、抄送、密送、主题字段标签样式 */
+.compose-to-field .compose-label,
+.compose-cc-field .compose-label,
+.compose-bcc-field .compose-label,
+.compose-field:not(.compose-content-field) .compose-label {
+    margin-bottom: 0;
+    min-width: 60px;
+    flex-shrink: 0;
+}
+
+.compose-input {
+    width: 100%;
+    padding: 10px 0;
+    border: none;
+    border-bottom: 2px solid #ddd;
+    border-radius: 0;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-bottom-color 0.2s;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+.compose-input:focus {
+    outline: none;
+    border-bottom-color: #1976d2;
+}
+
+/* 收件人、抄送、密送字段特殊布局 */
+.compose-to-field .compose-input-container,
+.compose-cc-field .compose-input-container,
+.compose-bcc-field .compose-input-container {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 12px;
+}
+
+.compose-to-field .compose-input,
+.compose-cc-field .compose-input,
+.compose-bcc-field .compose-input {
+    flex: 1;
+}
+
+.compose-actions-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.compose-action-btn {
+    background: none;
+    border: none;
+    color: #1976d2;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.compose-action-btn:hover {
+    background-color: #f8f9fa;
+    color: #1565c0;
+}
+
+.compose-remove-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.compose-remove-btn:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.compose-remove-btn svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+}
+
+.compose-divider {
+    color: #ccc;
+    font-size: 14px;
+}
+
+.compose-input::placeholder {
+    color: #999;
+}
+
+.compose-content-field {
+    flex: 1;
+    min-height: 300px;
+}
+
+.compose-editor-container {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    overflow: hidden;
+    background: white;
+}

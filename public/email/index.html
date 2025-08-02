@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>无得科技邮件</title>
+    <link rel="stylesheet" href="../email/assets//css/email-page.css">
+        <link rel="stylesheet" href="../email/assets/css/build.css">
+    <link rel="shortcut icon" href="../ico/8565645672.ico" type="image/x-icon" />
+</head>
+
+<body>
+    <div class="email-container">
+        <!-- 顶部导航栏 -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="title">无得科技</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="user-profile" id="userProfile">
+                    <span class="username">账户</span>
+                    <span class="dropdown-arrow">▼</span>
+                    <div class="dropdown-menu" id="dropdownMenu">
+                        <div class="dropdown-item">切换账户</div>
+                        <div class="dropdown-item">退出登录</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 空白头部区域 -->
+        <div class="two">
+            <button class="compose-btn">
+                <span class="compose-icon"></span>新邮件</button>
+            <span class="ribbon-divider-wrapper wrapper-251"><span class="ribbon-bottom-bar-divider divider-252"></span></span>
+            <button class="action-btn delete-btn">
+                <span class="delete-icon"></span>删除</button>
+            <span class="ribbon-divider-wrapper wrapper-251"><span class="ribbon-bottom-bar-divider divider-252"></span></span>
+            <button class="action-btn mark-btn">
+                <span class="mark-icon"></span>标记/取消标记</button>
+            <span class="ribbon-divider-wrapper wrapper-251"><span class="ribbon-bottom-bar-divider divider-252"></span></span>
+            <button class="action-btn pin-btn">
+                <span class="pin-icon"></span>固定/取消固定</button>
+        </div>
+
+        <div class="main-content">
+            <!-- 左侧边栏 -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <div class="nav-section">
+                        <div class="nav-item active">
+                            <span class="nav-text">收件箱</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="nav-text">垃圾邮件</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="nav-text">已发送</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="nav-text">草稿箱</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="nav-text">已删除</span>
+                        </div>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="section-title">邮件分类</div>
+                        <div class="nav-item">
+                            <span class="nav-text">工作</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="nav-text">个人</span>
+                        </div>
+                        <div class="nav-item">
+                            <span class="nav-text">重要</span>
+                        </div>
+                    </div>
+                </nav>
+                <div class="sidebar-footer">
+                    <a href="https://www.shaoxin.top" target="_blank" class="copyright-link">无得科技提供技术支持</a>
+                </div>
+            </aside>
+
+            <!-- 邮件导航区域 -->
+            <aside class="navigation" id="emailNavigation">
+                <!-- 邮件列表将在这里显示 -->
+            </aside>
+
+            <!-- 邮件详情区域 -->
+            <div class="email-items" id="emailItems">
+                <!-- 邮件列表将通过JavaScript动态加载 -->
+            </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="../email/assets/ico.js"></script>
+    <script src="../email/assets/icon.js"></script>
+    <script src="../email/assets/email-renderer.js"></script>
+    <script src="../email/assets/Receive.js"></script>
+    <script src="../email/assets/email-page.js"></script>
+    <script src="../email/assets/display.js"></script>
+    <script src="../email/assets/buildone.js"></script>
+    <script src="../email/assets/buildtwo.js"></script>
+    <script src="../email/assets/buildsan.js"></script>
+    <script src="../email/assets/build.js"></script>
+    <script src="../email/assets/total.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,61 @@
+Received: from xmbgsz5.mail.qq.com (::ffff:113.108.92.28)
+	by shaoxin.top with SMTP
+	Wed, 30 Jul 2025 09:30:55 GMT
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=qq.com; s=s201512;
+	t=1753867854; bh=LeRS8tvH6coB8GWuOARMYGejQ02sDi1jW5ZyqDafiaw=;
+	h=From:To:Cc:Subject:Date;
+	b=d/EZIhdLUuyp1VHuuVewrhfv87JU0mRKmUGLM1HvWn7V75s9LTLLH5c2BHypfUaGW
+	 c/Zw2oXmJgCCzrBa8KLVR3J3aVCvQueps5kBAjXgHe4jaWcUStn+V7Fxj5rMxpF7zT
+	 msl8RrBkZr3IEQXIWu+3totorGyLELNweO4XxX5M=
+X-QQ-XMRINFO: OD9hHCdaPRBwq3WW+NvGbIU=
+X-QQ-XMAILINFO: NOGjjKUrN7vhjACR09OSmX5aMAv79nyb0ltx6SWskXnw7sHfC9bpGnMVX7Logn
+	 fAKfHegLCTwuujVi6fUGYUUQiP2LcKhVd/+AspKcB5FEO9Dvf/dxVwmMOgGufYeb5+H65UFndqPhF
+	 eHaLq8JjDZ4NhsO53yNvRb0u3kpYAXLOaJp8k5tsJldv2v8mcYii4y8H6scAQtzLAKdGXnzet4onX
+	 5/wZlMKcdpepwM1/dICb4cG86Ee4gYGjkhJZ5EehTlv3qGDf/vRB1MO4S8dv8g7sI9g4beTW84DWV
+	 50G306KCXRfyTYN20zdAcak9/4mAN41Ldp10HZgu+T1ZBf/wRBqKlKfB8WGOyv7DhRdyDm4VMbMfS
+	 CcFiTDTTYf+bRsDdfZ5CdMlkJt+EzJ1HUx25UI1Nm3tt0hR4mYetBopZJinNTqNAi8Q+59jzlA1CL
+	 DtF1b7cnPFbP0pE/iyDH0NU14yUwKYP7B2HWAsfMxb74ya3ONL82MGbX4kDv4iqsQ3mV3Q4x/KiGn
+	 HK4S371MiFU8AFqhEY9FxAp7me0ATfw+nJtprXI/keJg/NbReco02y0UdII2/wVDDVotdrlY+EqLL
+	 cTm6cnf61mambaJzJ/Q8zH8jT8In8YAaTElIw3ESVErvGqLvGqqauz36+u3UAHOArqRjG6tqm38d1
+	 Un/rSiQnfU90pCHD9f4dPK2O45XU8BPj8MLao9zeGXTL4pUKeM7ZdQl6NCtQRuoZy9hDw5PvRxDiU
+	 ierNYwL8QzZafop2mzj13wrZYvYMsH/cNKoN6aDPS7Mhp+jfyJMjqJ1WyQvSbS0ZlfxqDDu+WFNkM
+	 1nh01OmEcGjY9xfh9/P/NTbtpFfRBy/nPnRnL8XswuXt2OI3j6HgihDUl8cNY3ajGX4nB5EHmC8QS
+	 4PtwZ03ZGgVIfzrPmBbXDcQAdR5BB2zjji94lczL4E8/egQwQJmnbzSDlfar1QPPMNszoSUwpDH4U
+	 dNwGisvst85FhCXTEUaNqTVUFPvmPJRl6gAKcernN8EI+UxkveT6U7xw+uN5vJESnGjpvs+gt0Q5E
+	 1ZW4K8ZV1415bMkgm/ZQxPz0MNA==
+From: "=?utf-8?B?57uN5piV?=" <473797238@qq.com>
+To: "=?utf-8?B?d2FuZ3NoYW94aW55YQ==?=" <wangshaoxinya@outlook.com>
+Cc: "=?utf-8?B?YWRtaW4=?=" <admin@shaoxin.top>
+Subject: cs
+Mime-Version: 1.0
+Content-Type: multipart/alternative;
+	boundary="----=_NextPart_6889E64D_E2B0BD00_0450D4FC"
+Content-Transfer-Encoding: 8Bit
+Date: Wed, 30 Jul 2025 17:30:53 +0800
+X-Priority: 3
+Message-ID: <tencent_F646427586607297123B1FDEAFB8FE627C08@qq.com>
+X-QQ-MIME: TCMime 1.0 by Tencent
+X-Mailer: QQMail 2.x
+X-QQ-Mailer: QQMail 2.x
+X-QQ-mid: xmsezc29-2t1753867853ts2xcdebm
+
+This is a multi-part message in MIME format.
+
+------=_NextPart_6889E64D_E2B0BD00_0450D4FC
+Content-Type: text/plain;
+	charset="utf-8"
+Content-Transfer-Encoding: base64
+
+5rWL6K+V
+
+------=_NextPart_6889E64D_E2B0BD00_0450D4FC
+Content-Type: text/html;
+	charset="utf-8"
+Content-Transfer-Encoding: base64
+
+PGRpdiBzdHlsZT0ibGluZS1oZWlnaHQ6IDEuNDM7IGZvbnQtZmFtaWx5OiAtYXBwbGUtc3lz
+dGVtLCBzeXN0ZW0tdWk7IGZvbnQtc2l6ZTogMTRweDsgY29sb3I6IHJnYigwLCAwLCAwKTsi
+Pua1i+ivlTwvZGl2PjxkaXYgc3R5bGU9ImxpbmUtaGVpZ2h0OiAxLjQzOyI+PGJyICAvPjwv
+ZGl2Pg==
+
+------=_NextPart_6889E64D_E2B0BD00_0450D4FC--

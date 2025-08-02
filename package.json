@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "dns": "^0.2.2",
+    "express": "^5.1.0",
+    "iconv-lite": "^0.6.3",
+    "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.7.4"
+  }
+}

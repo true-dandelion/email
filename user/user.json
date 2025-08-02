@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "email": "admin@shaoxin.top",
+    "password": "admin@shaoxin.top",
+    "permissions" : "0"
+  },
+  {
+    "id": 2,
+    "email": "delion@shaoxin.top",
+    "password": "delion@shaoxin.top",
+    "permissions" : "0"
+  }
+]
