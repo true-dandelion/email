@@ -25,9 +25,8 @@ class ComposeEmail {
 
     bindComposeEvents() {
         if (window.emailApp) {
-            window.emailApp.handleCompose = () => {
-                this.openComposeWindow();
-            };
+            // 使用email-page.js中定义的handleCompose方法
+            // 不要重写它，让原有逻辑保持不变
         }
     }
 
@@ -40,6 +39,18 @@ class ComposeEmail {
         // 使用固定的新邮件标识符
         this.composeTabId = 'create';
         this.isComposing = true;
+
+        // 隐藏邮件导航区域
+        const emailNavigation = document.getElementById('emailNavigation');
+        if (emailNavigation) {
+            emailNavigation.style.display = 'none';
+        }
+        
+        // 清空邮件列表区域
+        const emailItems = document.getElementById('emailItems');
+        if (emailItems) {
+            emailItems.innerHTML = '';
+        }
 
         // 更新URL参数为新邮件
         const url = new URL(window.location);
@@ -72,7 +83,6 @@ class ComposeEmail {
         // 添加到标签页系统
         window.emailApp.addEmailTab(tabData);
         window.emailApp.switchEmailTab(this.composeTabId);
-
     }
 
     // 渲染新邮件编辑器界面
@@ -113,11 +123,11 @@ class ComposeEmail {
                             <div class="compose-input-container">
                                 <input type="email" class="compose-input" id="compose-to" placeholder="请输入收件人邮箱地址" multiple>
                             <div class="compose-actions-inline">
-                                <button type="button" class="compose-action-btn" id="show-cc-btn">抄送</button>
-                                <span class="compose-divider">|</span>
-                                <button type="button" class="compose-action-btn" id="show-bcc-btn">密送</button>
-                                <span class="compose-divider">|</span>
-                                <button type="button" class="compose-action-btn" id="separate-send-btn">分别发送</button>
+                                <!--<button type="button" class="compose-action-btn" id="show-cc-btn">抄送</button>-->
+                                <!--<span class="compose-divider">|</span>-->
+                                <!--<button type="button" class="compose-action-btn" id="show-bcc-btn">密送</button>-->
+                                <!--<span class="compose-divider">|</span>-->
+                                <!--<button type="button" class="compose-action-btn" id="separate-send-btn">分别发送</button>-->
                             </div>
                         </div>
                     </div>
@@ -388,9 +398,9 @@ class ComposeEmail {
                                     </button>
                                     
                                     <!-- 插入图片 -->
-                                    <button type="button" class="toolbar-btn" id="insert-image-btn" title="插入图片">
-                                        ${window.VectorIcons.insertimag}
-                                    </button>
+                                   <!-- <button type="button" class="toolbar-btn" id="insert-image-btn" title="插入图片">-->
+                                    <!--    ${window.VectorIcons.insertimag}-->
+                                   <!-- </button>-->
                                     
                                     <!-- 插入链接 -->
                                     <button type="button" class="toolbar-btn" id="insert-link-btn" title="插入链接">
@@ -412,8 +422,8 @@ class ComposeEmail {
                         
                         <div class="compose-actions">
                             <button type="button" class="compose-btn-primary" id="send-email">发送</button>
-                            <button type="button" class="compose-btn-secondary" id="save-draft">保存草稿</button>
-                            <button type="button" class="compose-btn-secondary" id="discard-email">丢弃</button>
+                            <!--<button type="button" class="compose-btn-secondary" id="save-draft">保存草稿</button>-->
+                            <button type="button" class="compose-btn-secondary" id="discard-email">删除</button>
                         </div>
                     </div>
                 </div>

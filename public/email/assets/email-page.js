@@ -1,38 +1,35 @@
 class EmailApp {
     constructor() {
-        this.currentFolder = '收件箱'; // 默认选中收件箱
-        this.emailTabs = new Map(); // 存储打开的邮件标签页
-        this.activeTabId = null; // 当前激活的标签页ID
-        this.emailStates = new Map(); // 存储邮件状态
+        this.currentFolder = '收件箱';
+        this.emailTabs = new Map();
+        this.activeTabId = null;
+        this.emailStates = new Map();
+        this.initSentEmailManager();
         this.init();
         this.initSSE();
     }
 
+    initSentEmailManager() {
+        if (window.SentEmailManager) {
+            this.sentEmailManager = new window.SentEmailManager(this);
+        }
+    }
     init() {
         this.bindEvents();
-        this.updateEmailList();
         this.initializeIcons();
         this.initSidebarToggle();
-        this.checkUrlParams();
+        const hasUrlParams = this.checkUrlParams();
+        if (!hasUrlParams) {
+            this.updateEmailList();
+        }
         this.loadEmailStates();
     }
 
-    // 检查URL参数并自动加载邮件
     checkUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
+        let hasUrlParams = false;
         
-        // 检查是否是新邮件
-        if (urlParams.has('create')) {
-            // 延迟执行，确保页面加载完成
-            setTimeout(() => {
-                // 直接调用handleCompose方法
-                this.handleCompose();
-            }, 500);
-            return;
-        }
-        
-        // 检查文件夹参数
-        const folderParams = ['Inbox', 'litter', 'Send', 'draft', 'Delete', 'Job', 'individual', 'significant'];
+        const folderParams = ['Inbox', 'litter', 'Send', 'draft', 'Delete', 'Job', 'individual', 'significant', 'set'];
         let currentFolder = null;
         let emailId = null;
         
@@ -40,11 +37,11 @@ class EmailApp {
             if (urlParams.has(folder)) {
                 currentFolder = folder;
                 emailId = urlParams.get('m');
+                hasUrlParams = true;
                 break;
             }
         }
         
-        // 如果有文件夹参数，切换到对应文件夹
         if (currentFolder) {
             const folderMap = {
                 'Inbox': '收件箱',
@@ -54,7 +51,8 @@ class EmailApp {
                 'Delete': '已删除',
                 'Job': '工作',
                 'individual': '个人',
-                'significant': '重要'
+                'significant': '重要',
+                'set': '设置'
             };
             
             const folderName = folderMap[currentFolder];
@@ -63,23 +61,27 @@ class EmailApp {
             }
         }
         
-        // 如果有邮件ID，加载邮件详情
         if (emailId) {
-            // 检查是否已经有这个标签页存在
             if (this.emailTabs.has(emailId)) {
-                // 如果标签页已存在，直接切换
                 this.switchEmailTab(emailId);
-                return;
+            } else {
+                setTimeout(() => {
+                    this.loadEmailFromUrl(emailId);
+                }, 1000);
             }
-            
-            // 延迟执行，确保邮件列表已加载
-            setTimeout(() => {
-                this.loadEmailFromUrl(emailId);
-            }, 1000);
+            hasUrlParams = true;
         }
+
+        if (urlParams.has('create')) {
+            setTimeout(() => {
+                this.handleCompose();
+            }, 500);
+            hasUrlParams = true;
+        }
+        
+        return hasUrlParams;
     }
 
-    // 清除URL中的邮件参数
     clearEmailUrlParam() {
         const url = new URL(window.location);
         url.searchParams.delete('m');
@@ -87,16 +89,13 @@ class EmailApp {
         window.history.replaceState({}, '', url);
     }
 
-    // 更新URL中的邮件参数
     updateEmailUrlParam(emailId) {
         const url = new URL(window.location);
         
-        // 清除create参数（如果存在）
         url.searchParams.delete('create');
         
         url.searchParams.set('m', emailId);
         
-        // 确保有对应的文件夹参数
         const folderMap = {
             '收件箱': 'Inbox',
             '垃圾邮件': 'litter',
@@ -110,27 +109,22 @@ class EmailApp {
         
         const folderParam = folderMap[this.currentFolder];
         if (folderParam) {
-            // 清除其他文件夹参数
             Object.values(folderMap).forEach(param => {
                 if (param !== folderParam) {
                     url.searchParams.delete(param);
                 }
             });
-            // 设置当前文件夹参数
             url.searchParams.set(folderParam, '');
         }
         
         window.history.replaceState({}, '', url);
     }
 
-    // 更新邮件列表的选中状态
     updateEmailListSelection(emailId) {
-        // 移除所有选中状态
         document.querySelectorAll('.nav-email-item.selected').forEach(item => {
             item.classList.remove('selected');
         });
         
-        // 查找对应的邮件项并添加选中状态
         const navItems = document.querySelectorAll('.nav-email-item');
         for (const item of navItems) {
             const itemEmailId = `${item.dataset.timestamp}_${item.dataset.filename}`;
@@ -141,31 +135,51 @@ class EmailApp {
         }
     }
 
-    // 从URL参数加载邮件详情
     async loadEmailFromUrl(emailId) {
         try {
-            // 构建API接口URL
-            const apiUrl = `/amail/Receive/${emailId}`;
+            let apiUrl;
             
-            // 尝试在导航中找到对应的邮件项并选中
+            const urlParams = new URLSearchParams(window.location.search);
+            let currentFolderType = null;
+            
+            const folderParams = ['Inbox', 'litter', 'Send', 'draft', 'Delete', 'Job', 'individual', 'significant'];
+            for (const folder of folderParams) {
+                if (urlParams.has(folder)) {
+                    currentFolderType = folder;
+                    break;
+                }
+            }
+            
+
+            
+            switch (currentFolderType) {
+                case 'Inbox':
+                default:
+                    apiUrl = `/amail/Receive/${emailId}`;
+                    break;
+                case 'Send':
+                    if (this.sentEmailManager) {
+                        await this.sentEmailManager.loadEmailFromUrl(emailId);
+                        return;
+                    } else {
+                        apiUrl = `/cmail/examdeta/${emailId}`;
+                    }
+                    break;
+            }
+
             const navItems = document.querySelectorAll('.nav-email-item');
             for (const item of navItems) {
                 const itemEmailId = `${item.dataset.timestamp}_${item.dataset.filename}`;
                 if (itemEmailId === emailId) {
-                    // 移除其他选中状态
                     document.querySelectorAll('.nav-email-item.selected').forEach(selectedItem => {
                         selectedItem.classList.remove('selected');
                     });
-                    // 添加选中状态
                     item.classList.add('selected');
                     break;
                 }
             }
             
-            // 调用邮件详情接口
-            // 从emailId中提取fileName（去掉时间戳前缀）
-            const fileName = emailId.includes('_') ? emailId.split('_').slice(1).join('_') : emailId;
-            await this.fetchEmailDetail(apiUrl, fileName);
+            await this.fetchEmailDetail(apiUrl, emailId);
         } catch (error) {
             console.error('从URL加载邮件失败:', error);
         }
@@ -174,43 +188,32 @@ class EmailApp {
     // 初始化SSE连接
     initSSE() {
         if (window.receiveAPI) {
-            // 设置新邮件回调
             window.receiveAPI.setOnNewMail((data) => {
                 this.handleNewMail(data);
             });
 
-            // 设置连接建立回调
             window.receiveAPI.setOnConnected((data) => {
             });
 
-            // 设置心跳回调
             window.receiveAPI.setOnHeartbeat((data) => {
-                // 心跳消息通常不需要特殊处理，保持连接活跃即可
             });
 
-            // 建立SSE连接
             window.receiveAPI.connectSSE();
         }
     }
 
-    // 处理新邮件推送
     handleNewMail(data) {
         
-        // 如果当前在收件箱，刷新邮件列表
         if (this.currentFolder === '收件箱') {
             this.refreshEmails();
         }
         
-        // 无论当前在哪个文件夹，都更新收件箱计数
         this.loadInboxCount();
         
-        // 显示新邮件通知
         this.showNewMailNotification(data.data);
     }
 
-    // 显示新邮件通知
     showNewMailNotification(mailData) {
-        // 创建通知元素
         const notification = document.createElement('div');
         notification.className = 'new-mail-notification';
         notification.innerHTML = `
@@ -222,10 +225,8 @@ class EmailApp {
             <button class="notification-close">×</button>
         `;
 
-        // 添加到页面
         document.body.appendChild(notification);
 
-        // 添加关闭事件
         const closeBtn = notification.querySelector('.notification-close');
         closeBtn.addEventListener('click', () => {
             notification.remove();
@@ -239,18 +240,14 @@ class EmailApp {
     }
 
     initializeIcons() {
-        // 初始化图标管理器
         if (window.IconManager) {
-            // 注入图标CSS
             window.IconManager.injectIconsToCSS();
             
-            // 为导航项自动添加图标
             setTimeout(() => {
                 window.IconManager.autoAddNavIcons();
             }, 100);
         }
         
-        // 初始化新邮件按钮图标
         const composeIcon = document.querySelector('.compose-icon');
         if (composeIcon && window.VectorIcons) {
             composeIcon.innerHTML = window.VectorIcons.newly;
@@ -273,18 +270,15 @@ class EmailApp {
         }
     }
 
-    // 初始化sidebar折叠功能
     initSidebarToggle() {
         const sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
 
-        // 创建折叠按钮
         const toggleButton = document.createElement('div');
         toggleButton.className = 'sidebar-toggle';
         toggleButton.innerHTML = '◀';
         toggleButton.title = '折叠/展开侧边栏';
         
-        // 添加点击事件
         toggleButton.addEventListener('click', () => {
             this.toggleSidebar();
         });
@@ -292,7 +286,6 @@ class EmailApp {
         sidebar.appendChild(toggleButton);
     }
 
-    // 切换sidebar折叠状态
     toggleSidebar() {
         const sidebar = document.querySelector('.sidebar');
         const toggleButton = document.querySelector('.sidebar-toggle');
@@ -309,14 +302,12 @@ class EmailApp {
     }
 
     bindEvents() {
-        // 导航项点击事件
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 this.handleNavClick(e);
             });
         });
 
-        // 新建邮件按钮
         const composeBtn = document.querySelector('.compose-btn');
         if (composeBtn) {
             composeBtn.addEventListener('click', () => {
@@ -324,7 +315,6 @@ class EmailApp {
             });
         }
 
-        // 标记按钮
         const markBtn = document.querySelector('.mark-btn');
         if (markBtn) {
             markBtn.addEventListener('click', () => {
@@ -332,7 +322,6 @@ class EmailApp {
             });
         }
 
-        // 置顶按钮
         const pinBtn = document.querySelector('.pin-btn');
         if (pinBtn) {
             pinBtn.addEventListener('click', () => {
@@ -340,7 +329,6 @@ class EmailApp {
             });
         }
 
-        // 删除按钮
         const deleteBtn = document.querySelector('.delete-btn');
         if (deleteBtn) {
             deleteBtn.addEventListener('click', () => {
@@ -348,7 +336,6 @@ class EmailApp {
             });
         }
 
-        // 用户配置文件下拉菜单
         const userProfile = document.getElementById('userProfile');
         const dropdownMenu = document.getElementById('dropdownMenu');
         if (userProfile && dropdownMenu) {
@@ -357,7 +344,6 @@ class EmailApp {
                 this.toggleDropdown();
             });
 
-            // 点击下拉菜单项
             dropdownMenu.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const item = e.target.closest('.dropdown-item');
@@ -367,7 +353,6 @@ class EmailApp {
             });
         }
 
-        // 点击其他地方关闭下拉菜单
         document.addEventListener('click', () => {
             this.closeDropdown();
         });
@@ -376,25 +361,24 @@ class EmailApp {
     handleNavClick(e) {
         const navItem = e.currentTarget;
 
-        // 移除所有活动状态
         document.querySelectorAll('.nav-item').forEach(item => {
             item.classList.remove('active');
         });
 
-        // 添加活动状态到当前项
         navItem.classList.add('active');
 
-        // 获取文件夹类型
         const navText = navItem.querySelector('.nav-text').textContent;
         this.switchFolder(navText);
     }
 
     switchFolder(folderName) {
-        // 重置之前文件夹的显示
+        this.clearAllEmailTabs();
+        
         this.resetNavItemText();
         this.currentFolder = folderName;
         
-        // 更新URL参数
+        this.updateNavSelection(folderName);
+        
         const url = new URL(window.location);
         const folderMap = {
             '收件箱': 'Inbox',
@@ -402,19 +386,18 @@ class EmailApp {
             '已发送': 'Send',
             '草稿箱': 'draft',
             '已删除': 'Delete',
+            '设置': 'set',
             '工作': 'Job',
             '个人': 'individual',
             '重要': 'significant'
         };
         
-        // 清除所有文件夹参数和邮件参数
         Object.values(folderMap).forEach(param => {
             url.searchParams.delete(param);
         });
         url.searchParams.delete('m');
         url.searchParams.delete('create');
         
-        // 设置当前文件夹参数
         const folderParam = folderMap[folderName];
         if (folderParam) {
             url.searchParams.set(folderParam, '');
@@ -422,11 +405,38 @@ class EmailApp {
         
         window.history.pushState({}, '', url);
         
-        this.updateEmailList();
+        const folderEvent = new CustomEvent('folderSwitched', {
+            detail: { folderName: folderName }
+        });
+        document.dispatchEvent(folderEvent);
+        
+        if (folderName === '设置') {
+            const emailNavigation = document.getElementById('emailNavigation');
+            if (emailNavigation) {
+                emailNavigation.style.display = 'none';
+            }
+            const emailItems = document.getElementById('emailItems');
+            if (emailItems) {
+                emailItems.innerHTML = '';
+                const event = new CustomEvent('showSettings');
+                document.dispatchEvent(event);
+            }
+        } else {
+            const emailNavigation = document.getElementById('emailNavigation');
+            if (emailNavigation) {
+                emailNavigation.style.display = 'block';
+            }
+            
+            // 确保在切换到已发送文件夹时 SentEmailManager 已初始化
+            if (folderName === '已发送' && !this.sentEmailManager && window.SentEmailManager) {
+                this.sentEmailManager = new window.SentEmailManager(this);
+            }
+            
+            this.updateEmailList();
+        }
     }
 
     resetNavItemText() {
-        // 重置所有导航项的文本显示
         const navItems = document.querySelectorAll('.nav-item');
         navItems.forEach(navItem => {
             const navText = navItem.querySelector('.nav-text');
@@ -440,21 +450,46 @@ class EmailApp {
                 }
             }
             
-            // 只移除非收件箱的计数元素，保留收件箱的计数
             if (navCount && navText && !navText.textContent.includes('收件箱')) {
                 navCount.remove();
             }
         });
     }
 
-
+    updateNavSelection(folderName) {
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        const navItems = document.querySelectorAll('.nav-item');
+        for (const navItem of navItems) {
+            const navText = navItem.querySelector('.nav-text');
+            if (navText && navText.textContent.trim() === folderName) {
+                navItem.classList.add('active');
+                break;
+            }
+        }
+    }
 
     handleCompose() {
-        // 调用新邮件功能
+        const emailNavigation = document.getElementById('emailNavigation');
+        if (emailNavigation) {
+            emailNavigation.style.display = 'none';
+        }
+        
+        const emailItems = document.getElementById('emailItems');
+        if (emailItems) {
+            emailItems.innerHTML = '';
+        }
+        
+        const url = new URL(window.location);
+        url.searchParams.delete('m');
+        url.searchParams.set('create', '');
+        window.history.pushState({}, '', url);
+        
         if (window.composeEmail) {
             window.composeEmail.openComposeWindow();
         } else {
-            // 如果composeEmail还没有初始化，延迟调用
             setTimeout(() => {
                 if (window.composeEmail) {
                     window.composeEmail.openComposeWindow();
@@ -464,68 +499,56 @@ class EmailApp {
     }
 
     refreshEmails() {
-        // 显示加载动画
         this.showLoadingAnimation();
-        
-        // 刷新邮件列表
-        this.updateEmailList();
+
+        this.updateEmailList(false);
         this.loadEmailStates();
     }
 
-    // 显示加载动画
     showLoadingAnimation() {
         const emailItems = document.getElementById('emailItems');
         const emailHeadersContainer = emailItems.querySelector('.email-headers-container');
         const emailDetail = emailItems.querySelector('.email-detail');
         
-        // 为email-headers-container添加加载动画
         if (emailHeadersContainer) {
             emailHeadersContainer.classList.add('loading');
             emailHeadersContainer.classList.remove('loaded');
         }
         
-        // 为email-detail添加加载动画
         if (emailDetail) {
             emailDetail.classList.add('loading');
             emailDetail.classList.remove('loaded');
         }
     }
 
-    // 隐藏加载动画
     hideLoadingAnimation() {
         const emailItems = document.getElementById('emailItems');
         const emailHeadersContainer = emailItems.querySelector('.email-headers-container');
         const emailDetail = emailItems.querySelector('.email-detail');
         
-        // 移除email-headers-container的加载动画
         if (emailHeadersContainer) {
             emailHeadersContainer.classList.remove('loading');
             emailHeadersContainer.classList.add('loaded');
         }
         
-        // 移除email-detail的加载动画
         if (emailDetail) {
             emailDetail.classList.remove('loading');
             emailDetail.classList.add('loaded');
         }
     }
 
-    // 加载邮件状态
     async loadEmailStates() {
         try {
             const response = await window.receiveAPI.getEmailStates();
             
-            // 处理API响应格式 {success: true, data: {...}}
             if (response && response.success && response.data) {
                 const states = response.data;
                 
-                // 遍历状态对象
                 Object.keys(states).forEach(mailId => {
                     const state = { mailId, ...states[mailId] };
                     this.emailStates.set(mailId, state);
                 });
                 
-                // 更新邮件列表显示
                 this.updateEmailListDisplay();
             }
         } catch (error) {
@@ -533,7 +556,6 @@ class EmailApp {
         }
     }
 
-    // 处理标记邮件
     async handleMarkEmail() {
         const selectedEmail = this.getSelectedEmail();
         if (!selectedEmail) {
@@ -549,11 +571,8 @@ class EmailApp {
 
         try {
             await window.receiveAPI.updateEmailState(mailId, { marked: newMarked });
-            // 更新本地状态
             this.emailStates.set(mailId, { ...currentState, marked: newMarked });
-            // 更新显示
             this.updateEmailItemDisplay(selectedEmail, mailId);
-            // 更新按钮状态
             this.updateButtonStates(mailId);
         } catch (error) {
             console.error('更新邮件标记状态失败:', error);
@@ -561,7 +580,6 @@ class EmailApp {
         }
     }
 
-    // 处理置顶邮件
     async handlePinEmail() {
         const selectedEmail = this.getSelectedEmail();
         if (!selectedEmail) {
@@ -577,11 +595,8 @@ class EmailApp {
 
         try {
             await window.receiveAPI.updateEmailState(mailId, { pinned: newPinned });
-            // 更新本地状态
             this.emailStates.set(mailId, { ...currentState, pinned: newPinned });
-            // 更新显示
             this.updateEmailItemDisplay(selectedEmail, mailId);
-            // 更新按钮状态
             this.updateButtonStates(mailId);
         } catch (error) {
             console.error('更新邮件置顶状态失败:', error);
@@ -589,11 +604,157 @@ class EmailApp {
         }
     }
 
-    // 处理删除邮件
+    initModalStyles() {
+        if (!document.getElementById('modal-styles')) {
+            const style = document.createElement('style');
+            style.id = 'modal-styles';
+            style.textContent = `
+                .modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    z-index: 1000;
+                }
+
+                .modal-content {
+                    background-color: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                    width: 90%;
+                    max-width: 400px;
+                    overflow: hidden;
+                }
+
+                .modal-header {
+                    padding: 16px;
+                    border-bottom: 1px solid #eee;
+                    text-align: center;
+                    font-weight: bold;
+                    font-size: 16px;
+                }
+
+                .modal-header.success {
+                    color: #4caf50;
+                }
+
+                .modal-header.error {
+                    color: #f44336;
+                }
+
+                .modal-message {
+                    padding: 20px;
+                    text-align: center;
+                    font-size: 16px;
+                    color: #333;
+                }
+
+                .modal-buttons {
+                    display: flex;
+                    justify-content: center;
+                    padding: 16px;
+                    gap: 10px;
+                }
+
+                .modal-button {
+                    padding: 8px 16px;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 14px;
+                }
+
+                .modal-button.primary {
+                    background-color: #4caf50;
+                    color: white;
+                }
+
+                .modal-button.secondary {
+                    background-color: #f5f5f5;
+                    color: #333;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    removeExistingModal() {
+        const existingModal = document.querySelector('.modal-overlay');
+        if (existingModal) {
+            existingModal.remove();
+        }
+    }
+
+    showModalMessage(message, type = 'success') {
+        this.initModalStyles();
+        this.removeExistingModal();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header ${type}">
+                    ${type === 'success' ? '操作成功' : '操作失败'}
+                </div>
+                <div class="modal-message">${message}</div>
+                <div class="modal-buttons">
+                    <button class="modal-button primary">确定</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const confirmBtn = modal.querySelector('.modal-button.primary');
+        confirmBtn.addEventListener('click', () => {
+            modal.remove();
+        });
+    }
+
+    showConfirmModal(message) {
+        this.initModalStyles();
+        this.removeExistingModal();
+
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">确认操作</div>
+                    <div class="modal-message">${message}</div>
+                    <div class="modal-buttons">
+                        <button class="modal-button secondary">取消</button>
+                        <button class="modal-button primary">确认</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+
+            const cancelBtn = modal.querySelector('.modal-button.secondary');
+            const confirmBtn = modal.querySelector('.modal-button.primary');
+
+            cancelBtn.addEventListener('click', () => {
+                modal.remove();
+                resolve(false);
+            });
+
+            confirmBtn.addEventListener('click', () => {
+                modal.remove();
+                resolve(true);
+            });
+        });
+    }
+
     async handleDeleteEmail() {
         const selectedEmail = this.getSelectedEmail();
         if (!selectedEmail) {
-            alert('请先选择一封邮件');
+            this.showModalMessage('请先选择一封邮件', 'error');
             return;
         }
 
@@ -601,63 +762,51 @@ class EmailApp {
         const timestamp = selectedEmail.dataset.timestamp;
         const mailId = `${timestamp}_${fileName}`;
 
-        // 确认删除
-        if (!confirm('确定要删除这封邮件吗？')) {
+        const confirmed = await this.showConfirmModal(`是否要删除(${mailId})`);
+        if (!confirmed) {
             return;
         }
 
         try {
-            // 调用删除API
             await window.receiveAPI.deleteEmail(mailId);
             
-            // 从本地状态中移除
             this.emailStates.delete(mailId);
             
-            // 从DOM中移除邮件项
             selectedEmail.remove();
             
-            // 关闭当前邮件标签页（如果有）
             if (this.activeTabId === mailId) {
                 this.closeEmailTab(mailId);
             }
             
-            // 刷新邮件列表
             this.refreshEmails();
             
-            alert('邮件删除成功');
+            this.showModalMessage('邮件删除成功');
         } catch (error) {
             console.error('删除邮件失败:', error);
-            alert('删除失败，请重试');
+            this.showModalMessage('删除失败，请重试', 'error');
         }
     }
 
-    // 获取当前选中的邮件
     getSelectedEmail() {
         return document.querySelector('.nav-email-item.selected');
     }
 
-    // 更新邮件项显示
     updateEmailItemDisplay(emailItem, mailId) {
         const state = this.emailStates.get(mailId) || {};
         
-        // 更新未读状态
         if (state.read === false) {
             emailItem.classList.add('unread');
         } else {
             emailItem.classList.remove('unread');
         }
 
-        // 添加状态指示器
         this.updateEmailStateIndicators(emailItem, state);
     }
 
-    // 更新邮件状态指示器
     updateEmailStateIndicators(emailItem, state) {
-        // 移除现有的状态指示器
         const existingIndicators = emailItem.querySelectorAll('.email-state-indicator');
         existingIndicators.forEach(indicator => indicator.remove());
 
-        // 添加新的状态指示器
         const indicatorContainer = document.createElement('div');
         indicatorContainer.className = 'email-state-indicators';
         indicatorContainer.style.cssText = 'position: absolute; top: 5px; right: 5px; display: flex; gap: 4px;';
@@ -684,7 +833,6 @@ class EmailApp {
         }
     }
 
-    // 更新邮件列表显示
     updateEmailListDisplay() {
         const emailItems = document.querySelectorAll('.nav-email-item');
         emailItems.forEach(item => {
@@ -697,11 +845,9 @@ class EmailApp {
         });
     }
 
-    // 更新按钮状态
     updateButtonStates(mailId) {
         const state = this.emailStates.get(mailId) || {};
         
-        // 更新标记按钮状态
         const markBtn = document.querySelector('.mark-btn');
         if (markBtn) {
             if (state.marked) {
@@ -711,7 +857,6 @@ class EmailApp {
             }
         }
         
-        // 更新置顶按钮状态
         const pinBtn = document.querySelector('.pin-btn');
         if (pinBtn) {
             if (state.pinned) {
@@ -722,38 +867,50 @@ class EmailApp {
         }
     }
 
-    async updateEmailList() {
+    async updateEmailList(clearTabs = true) {
         const emailItems = document.getElementById('emailItems');
         const emailNavigation = document.getElementById('emailNavigation');
 
-        // 清空当前列表
-        emailItems.innerHTML = '';
+        if (clearTabs) {
+            emailItems.innerHTML = '';
+        }
+        
         emailNavigation.innerHTML = '';
 
-        // 如果是收件箱，获取真实数据
         if (this.currentFolder === '收件箱') {
             try {
                 await this.loadReceiveEmails();
-                // 收件箱加载成功后隐藏加载动画
                 setTimeout(() => {
                     this.hideLoadingAnimation();
                 }, 100);
-                // 收件箱加载成功，不需要调用updateNavigation
                 return;
             } catch (error) {
                 console.error('加载收件箱邮件失败:', error);
                 this.showEmptyState();
-                // 加载失败也要隐藏动画
+                this.hideLoadingAnimation();
+            }
+        } else if (this.currentFolder === '已发送') {
+            try {
+                if (this.sentEmailManager) {
+                    await this.sentEmailManager.loadSentEmails();
+                } else {
+                    console.error('SentEmailManager 未加载');
+                    this.showEmptyState();
+                }
+                setTimeout(() => {
+                    this.hideLoadingAnimation();
+                }, 100);
+                return;
+            } catch (error) {
+                console.error('加载已发送邮件失败:', error);
+                this.showEmptyState();
                 this.hideLoadingAnimation();
             }
         } else {
-            // 其他文件夹显示空状态
             this.showEmptyState();
-            // 隐藏加载动画
             this.hideLoadingAnimation();
         }
         
-        // 只有非收件箱或收件箱加载失败时才更新navigation区域
         this.updateNavigation();
     }
 
@@ -775,15 +932,19 @@ class EmailApp {
     }
 
     showEmptyState() {
-        const emailItems = document.getElementById('emailItems');
-        emailItems.innerHTML = `
-        `;
+        if (this.emailTabs.length === 0) {
+            const emailItems = document.getElementById('emailItems');
+            emailItems.innerHTML = `
+            `;
+        }
     }
 
     showEmailItemsPlaceholder() {
-        const emailItems = document.getElementById('emailItems');
-        emailItems.innerHTML = `
-        `;
+        if (this.emailTabs.length === 0) {
+            const emailItems = document.getElementById('emailItems');
+            emailItems.innerHTML = `
+            `;
+        }
     }
 
     async loadReceiveEmails() {
@@ -795,24 +956,29 @@ class EmailApp {
         try {
             const response = await window.receiveAPI.getReceiveEmails();
             if (response.success && response.data && response.data.mails) {
-                // 更新收件箱导航项的邮件数量
                 this.updateInboxCount(response.data.mails.length);
-                // 只在navigation区域显示邮件列表
                 this.renderEmailNavigation(response.data.mails);
-                // emailItems区域显示提示信息
-                this.showEmailItemsPlaceholder();
+                
+                if (this.emailTabs.length === 0) {
+                    this.showEmailItemsPlaceholder();
+                }
             } else {
                 this.updateInboxCount(0);
-                this.showEmptyState();
+                if (this.emailTabs.length === 0) {
+                    this.showEmptyState();
+                }
             }
         } catch (error) {
             console.error('获取收件箱邮件失败:', error);
             this.updateInboxCount(0);
-            this.showEmptyState();
+            if (this.emailTabs.length === 0) {
+                this.showEmptyState();
+            }
         }
     }
 
-    // 在后台加载收件箱邮件数量
+
+
     async loadInboxCount() {
         if (!window.receiveAPI) {
             return;
@@ -832,12 +998,10 @@ class EmailApp {
     }
 
     updateInboxCount(count) {
-        // 直接查找收件箱导航项，不依赖当前选中状态
         const navItems = document.querySelectorAll('.nav-item');
         let inboxNavItem = null;
         let inboxNavText = null;
         
-        // 查找收件箱导航项
         navItems.forEach(item => {
             const navText = item.querySelector('.nav-text');
             if (navText && navText.textContent.includes('收件箱')) {
@@ -847,16 +1011,13 @@ class EmailApp {
         });
         
         if (inboxNavItem && inboxNavText) {
-            // 移除已存在的计数元素
             const existingCount = inboxNavItem.querySelector('.nav-count');
             if (existingCount) {
                 existingCount.remove();
             }
             
-            // 确保nav-text只显示"收件箱"
             inboxNavText.textContent = '收件箱';
             
-            // 如果有邮件，添加计数元素
             if (count > 0) {
                 const countElement = document.createElement('span');
                 countElement.className = 'nav-count';
@@ -876,6 +1037,9 @@ class EmailApp {
             return;
         }
 
+        const url = new URL(window.location);
+        const currentEmailId = url.searchParams.get('m');
+        
         const navigationHTML = `
             <div class="navigation-header">
                 <h3 class="navigation-title">收件箱</h3>
@@ -885,7 +1049,6 @@ class EmailApp {
                     const fromInfo = window.receiveAPI.parseEmailAddress(mail.from);
                     const formattedTime = window.receiveAPI.formatTimestamp(mail.timestamp);
                     
-                    // 安全地转义HTML特殊字符
                     const escapeHtml = (text) => {
                         const div = document.createElement('div');
                         div.textContent = text;
@@ -897,8 +1060,11 @@ class EmailApp {
                     const safeFileName = escapeHtml(mail.fileName || mail.id || '');
                     const safeTimestamp = escapeHtml(mail.timestamp || '');
                     
+                    const emailId = `${safeTimestamp}_${safeFileName}`;
+                    const isSelected = currentEmailId === emailId ? 'selected' : '';
+                    
                     return `
-                        <div class="nav-email-item" data-filename="${safeFileName}" data-subject="${safeSubject}" data-from="${safeFrom}" data-timestamp="${safeTimestamp}">
+                        <div class="nav-email-item ${isSelected}" data-filename="${safeFileName}" data-subject="${safeSubject}" data-from="${safeFrom}" data-timestamp="${safeTimestamp}">
                             <div class="nav-email-from">${safeFrom}</div>
                             <div class="nav-email-subject">${safeSubject}</div>
                             <div class="nav-email-time">${formattedTime}</div>
@@ -910,14 +1076,12 @@ class EmailApp {
 
         emailNavigation.innerHTML = navigationHTML;
         
-        // 添加点击事件
         emailNavigation.querySelectorAll('.nav-email-item').forEach(item => {
             item.addEventListener('click', () => {
                 this.selectEmailFromNav(item);
             });
         });
         
-        // 更新邮件状态显示
         setTimeout(() => {
             this.updateEmailListDisplay();
         }, 100);
@@ -925,53 +1089,52 @@ class EmailApp {
 
 
 
+
+
     async selectEmailFromNav(navItem) {
-        // 移除其他选中状态
         document.querySelectorAll('.nav-email-item.selected').forEach(item => {
             item.classList.remove('selected');
         });
         
-        // 添加选中状态
         navItem.classList.add('selected');
         
         const fileName = navItem.dataset.filename;
         const timestamp = navItem.dataset.timestamp;
         const emailId = `${timestamp}_${fileName}`;
         
-        // 向后端发送状态更新，将邮件标记为已读
-        try {
-            const currentState = this.emailStates.get(emailId) || {};
-            if (currentState.read !== true) {
-                await window.receiveAPI.updateEmailState(emailId, { read: true });
-                // 更新本地状态
-                this.emailStates.set(emailId, { ...currentState, read: true });
-                // 更新显示
-                this.updateEmailItemDisplay(navItem, emailId);
+        if (this.currentFolder === '收件箱') {
+            try {
+                const currentState = this.emailStates.get(emailId) || {};
+                if (currentState.read !== true) {
+                    await window.receiveAPI.updateEmailState(emailId, { read: true });
+                    this.emailStates.set(emailId, { ...currentState, read: true });
+                    this.updateEmailItemDisplay(navItem, emailId);
+                }
+            } catch (error) {
+                console.error('更新邮件已读状态失败:', error);
             }
-        } catch (error) {
-            console.error('更新邮件已读状态失败:', error);
         }
         
-        // 更新按钮状态
         this.updateButtonStates(emailId);
         
-        // 更新地址栏参数
         const url = new URL(window.location);
         url.searchParams.set('m', emailId);
         window.history.pushState({}, '', url);
         
-        // 构建API接口URL
-        const apiUrl = `/amail/Receive/${emailId}`;
+        let apiUrl;
+        switch (this.currentFolder) {
+            case '收件箱':
+            default:
+                apiUrl = `/amail/Receive/${emailId}`;
+                break;
+        }
         
-        // 调用邮件详情接口
-        this.fetchEmailDetail(apiUrl, fileName);
+        this.fetchEmailDetail(apiUrl, emailId);
     }
 
-    // 获取邮件详情的API调用
     async fetchEmailDetail(apiUrl, fileName) {
         const emailItems = document.getElementById('emailItems');
         
-        // 显示加载状态和动画
         emailItems.innerHTML = `
             <div class="email-detail loading">
                 <div class="email-detail-header">
@@ -996,7 +1159,6 @@ class EmailApp {
             
             this.showEmailDetails(emailData, fileName);
             
-            // 加载完成后隐藏动画
             setTimeout(() => {
                 this.hideLoadingAnimation();
             }, 100);
@@ -1017,14 +1179,12 @@ class EmailApp {
         }
     }
 
-    showEmailDetails(emailData, fileName) {
-        // 从选中的邮件项获取基本信息作为备用
+    showEmailDetails(emailData, emailId) {
         const selectedItem = document.querySelector('.nav-email-item.selected');
         
-        // 构建完整的邮件ID（时间戳_文件名）
-        let emailId = fileName || Date.now().toString();
-        if (selectedItem && selectedItem.dataset.timestamp && selectedItem.dataset.filename) {
-            emailId = `${selectedItem.dataset.timestamp}_${selectedItem.dataset.filename}`;
+        let fileName = emailId;
+        if (emailId.includes('_')) {
+            fileName = emailId.split('_').slice(1).join('_');
         }
         
         let tabData = {
@@ -1041,13 +1201,10 @@ class EmailApp {
         };
         
         if (emailData && typeof emailData === 'object') {
-            // 检查是否有success字段，如果有则使用data字段
             const actualData = emailData.success ? emailData.data : emailData;
             
-            // 使用API返回的数据
             tabData.subject = actualData.subject || (selectedItem ? selectedItem.dataset.subject : '无主题');
             
-            // 处理发件人信息
             if (actualData.from) {
                 if (typeof actualData.from === 'object') {
                     tabData.fromInfo = {
@@ -1060,8 +1217,7 @@ class EmailApp {
             } else if (selectedItem) {
                 tabData.fromInfo = window.receiveAPI.parseEmailAddress(selectedItem.dataset.from);
             }
-            
-            // 处理收件人信息
+ 
             if (actualData.to && Array.isArray(actualData.to)) {
                 tabData.toInfo = actualData.to.map(recipient => {
                     if (typeof recipient === 'object') {
@@ -1073,8 +1229,7 @@ class EmailApp {
                     return window.receiveAPI ? window.receiveAPI.parseEmailAddress(recipient) : { name: recipient, email: recipient };
                 });
             }
-            
-            // 处理抄送信息
+
             if (actualData.cc && Array.isArray(actualData.cc)) {
                 tabData.ccInfo = actualData.cc.map(recipient => {
                     if (typeof recipient === 'object') {
@@ -1086,8 +1241,7 @@ class EmailApp {
                     return window.receiveAPI ? window.receiveAPI.parseEmailAddress(recipient) : { name: recipient, email: recipient };
                 });
             }
-            
-            // 处理密送信息
+
             if (actualData.bcc && Array.isArray(actualData.bcc)) {
                 tabData.bccInfo = actualData.bcc.map(recipient => {
                     if (typeof recipient === 'object') {
@@ -1099,8 +1253,7 @@ class EmailApp {
                     return window.receiveAPI ? window.receiveAPI.parseEmailAddress(recipient) : { name: recipient, email: recipient };
                 });
             }
-            
-            // 处理附件信息
+
             if (actualData.attachments && Array.isArray(actualData.attachments)) {
                 tabData.attachments = actualData.attachments.map(attachment => ({
                     filename: attachment.filename || attachment.name || '未知文件',
@@ -1110,17 +1263,13 @@ class EmailApp {
                 }));
             }
             
-            // 处理邮件内容
             tabData.content = actualData.html || actualData.text || actualData.content || actualData.body || '邮件内容为空';
             
-            // 处理时间
             if (actualData.date) {
-                // 检查是否为时间戳格式（数字）
                 if (typeof actualData.date === 'number') {
-                    const date = new Date(actualData.date * 1000); // 时间戳转换为毫秒
+                    const date = new Date(actualData.date * 1000);
                     tabData.formattedTime = date.toLocaleString('zh-CN');
                 } else {
-                    // 处理ISO日期字符串格式
                     const date = new Date(actualData.date);
                     tabData.formattedTime = date.toLocaleString('zh-CN');
                 }
@@ -1130,50 +1279,38 @@ class EmailApp {
                 tabData.formattedTime = window.receiveAPI.formatTimestamp(selectedItem.dataset.timestamp);
             }
         } else if (selectedItem) {
-            // 使用导航项的基本信息作为备用
             tabData.subject = selectedItem.dataset.subject;
             tabData.fromInfo = window.receiveAPI.parseEmailAddress(selectedItem.dataset.from);
             tabData.formattedTime = window.receiveAPI.formatTimestamp(selectedItem.dataset.timestamp);
             tabData.content = '邮件详情加载失败，显示基本信息';
         }
         
-        // 添加或切换到邮件标签页
         this.addEmailTab(tabData);
     }
 
-    // 添加邮件标签页
     addEmailTab(tabData) {
-        // 如果标签页已存在，直接切换
         if (this.emailTabs.has(tabData.id)) {
             this.switchEmailTab(tabData.id);
             return;
         }
 
-        // 添加新标签页
         this.emailTabs.set(tabData.id, tabData);
         this.activeTabId = tabData.id;
         
-        // 更新URL参数
         this.updateEmailUrlParam(tabData.id);
         
-        // 更新左侧邮件列表的选中状态
         this.updateEmailListSelection(tabData.id);
         
-        // 重新渲染标签页和内容
         this.renderEmailTabs();
         this.renderActiveEmailContent();
     }
 
-    // 切换邮件标签页
     switchEmailTab(tabId) {
         if (this.emailTabs.has(tabId)) {
             this.activeTabId = tabId;
             
-            // 检查是否是新邮件标签页
             if (tabId === 'create') {
-                // 新邮件标签页，设置create参数
                 const url = new URL(window.location);
-                // 清除所有其他参数
                 const folderParams = ['Inbox', 'litter', 'Send', 'draft', 'Delete', 'Job', 'individual', 'significant'];
                 folderParams.forEach(param => {
                     url.searchParams.delete(param);
@@ -1182,34 +1319,26 @@ class EmailApp {
                 url.searchParams.set('create', '');
                 window.history.replaceState({}, '', url);
             } else {
-                // 普通邮件标签页，更新邮件参数
                 this.updateEmailUrlParam(tabId);
             }
             
-            // 更新左侧邮件列表的选中状态
             this.updateEmailListSelection(tabId);
             this.renderEmailTabs();
             this.renderActiveEmailContent();
         }
     }
 
-    // 关闭邮件标签页
     closeEmailTab(tabId) {
         if (this.emailTabs.has(tabId)) {
             this.emailTabs.delete(tabId);
             
-            // 如果关闭的是当前激活的标签页
             if (this.activeTabId === tabId) {
-                // 切换到其他标签页或显示空状态
                 const remainingTabs = Array.from(this.emailTabs.keys());
                 if (remainingTabs.length > 0) {
                     this.activeTabId = remainingTabs[remainingTabs.length - 1];
                     
-                    // 根据标签页类型更新URL参数
                     if (this.activeTabId === 'create') {
-                        // 新邮件标签页，设置create参数
                         const url = new URL(window.location);
-                        // 清除所有其他参数
                         const folderParams = ['Inbox', 'litter', 'Send', 'draft', 'Delete', 'Job', 'individual', 'significant'];
                         folderParams.forEach(param => {
                             url.searchParams.delete(param);
@@ -1218,14 +1347,12 @@ class EmailApp {
                         url.searchParams.set('create', '');
                         window.history.replaceState({}, '', url);
                     } else {
-                        // 普通邮件标签页，更新邮件参数
                         this.updateEmailUrlParam(this.activeTabId);
                     }
                     
                     this.updateEmailListSelection(this.activeTabId);
                 } else {
                     this.activeTabId = null;
-                    // 如果没有剩余标签页，清除URL中的m参数和邮件列表选中状态
                     this.clearEmailUrlParam();
                     document.querySelectorAll('.nav-email-item.selected').forEach(item => {
                         item.classList.remove('selected');
@@ -1238,7 +1365,21 @@ class EmailApp {
         }
     }
 
-    // 渲染邮件标签页
+    clearAllEmailTabs() {
+        this.emailTabs.clear();
+        this.activeTabId = null;
+        
+        this.clearEmailUrlParam();
+        document.querySelectorAll('.nav-email-item.selected').forEach(item => {
+            item.classList.remove('selected');
+        });
+        
+        const emailItems = document.getElementById('emailItems');
+        if (emailItems) {
+            emailItems.innerHTML = '';
+        }
+    }
+
     renderEmailTabs() {
         const emailItems = document.getElementById('emailItems');
         
@@ -1248,7 +1389,6 @@ class EmailApp {
             return;
         }
 
-        // 创建标签页容器
         let tabsHtml = '<div class="email-headers-container loaded">';
         
         for (const [tabId, tabData] of this.emailTabs) {
@@ -1266,20 +1406,15 @@ class EmailApp {
         
         tabsHtml += '</div>';
         
-        // 添加当前激活标签页的内容
         if (this.activeTabId && this.emailTabs.has(this.activeTabId)) {
             const activeTab = this.emailTabs.get(this.activeTabId);
             
-            // 检查是否是新邮件标签页
             if (this.activeTabId === 'create') {
-                // 新邮件标签页，添加编辑器容器
                 tabsHtml += `
                     <div class="email-detail loaded" id="compose-editor-container">
-                        <!-- 新邮件编辑器将在这里渲染 -->
                     </div>
                 `;
             } else {
-                // 准备邮件数据给EmailRenderer
                 const emailData = {
                     from: activeTab.fromInfo,
                     to: activeTab.toInfo,
@@ -1289,7 +1424,6 @@ class EmailApp {
                     attachments: activeTab.attachments
                 };
                 
-                // 使用EmailRenderer渲染完整邮件内容
                 const emailContentHtml = EmailRenderer.renderEmailContent(emailData, activeTab.id, 'downloadAttachment', activeTab.formattedTime);
                 
                 tabsHtml += `
@@ -1307,8 +1441,6 @@ class EmailApp {
         
         emailItems.innerHTML = tabsHtml;     
 
-        
-        // 如果是新邮件标签页，渲染编辑器到指定容器
         if (this.activeTabId === 'create' && window.composeEmail) {
             const container = document.getElementById('compose-editor-container');
             if (container) {
@@ -1316,29 +1448,25 @@ class EmailApp {
             }
         }
         
-        // 绑定标签页点击事件
         this.bindTabEvents();
     }
 
-    // 渲染当前激活的邮件内容
     renderActiveEmailContent() {
-        // 这个方法在renderEmailTabs中已经处理了
-        // 保留这个方法以备将来扩展使用
     }
 
-    // 绑定标签页事件
     bindTabEvents() {
-        // 绑定标签页点击事件
         document.querySelectorAll('.email-header-bar').forEach(tab => {
             tab.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('email-close-btn')) {
-                    const tabId = tab.dataset.tabId;
-                    this.switchEmailTab(tabId);
+                if (e.target === tab.querySelector('.email-close-btn') || 
+                    tab.querySelector('.email-close-btn').contains(e.target)) {
+                    return;
                 }
+                
+                const tabId = tab.dataset.tabId;
+                this.switchEmailTab(tabId);
             });
         });
 
-        // 绑定关闭按钮事件
         document.querySelectorAll('.email-close-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1394,24 +1522,20 @@ class EmailApp {
 
 }
 
-// 下载附件函数
 function downloadAttachment(emailId, attachmentName) {
     EmailRenderer.downloadAttachment(emailId, attachmentName);
 }
 
-// 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     window.emailApp = new EmailApp();
 });
 
-// 页面卸载时清理SSE连接
 window.addEventListener('beforeunload', () => {
     if (window.emailApp && window.receiveAPI) {
         window.receiveAPI.closeSSE();
     }
 });
 
-// 导出供外部使用
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = EmailApp;
 }

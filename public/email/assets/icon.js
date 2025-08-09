@@ -187,7 +187,8 @@ const ICON_MAPPING = {
     '新邮件': 'newly',
     '标记': 'mark',
     '固定': 'fixed',
-    '删除': 'deleteIcon'
+    '删除': 'deleteIcon',
+    '设置': 'set'
 };
 
 // 根据文本获取对应图标

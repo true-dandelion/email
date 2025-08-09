@@ -148,7 +148,7 @@ class ReceiveAPI {
             }
 
             // 建立新的SSE连接
-            this.eventSource = new EventSource(`${this.baseURL}/sse/notifications`);
+            this.eventSource = new EventSource(`/amail/sse/notifications`);
 
             // 监听消息事件
             this.eventSource.onmessage = (event) => {

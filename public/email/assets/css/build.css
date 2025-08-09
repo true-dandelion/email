@@ -362,7 +362,8 @@
 }
 
 .compose-editor {
-    min-height: 250px;
+    height: 40vh;
+    min-height: 200px;
     padding: 12px;
     font-size: 14px;
     line-height: 1.6;
@@ -379,47 +380,33 @@
     transition: all 0.2s ease;
 }
 
-/* 内容块悬停效果 - 便于识别不同的样式区域 */
+/* 内容块悬停效果 - 去除蓝色方框 */
 .content-block:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-    outline: 1px dashed rgba(0, 123, 255, 0.3);
-    outline-offset: 1px;
+    background-color: transparent;
+    outline: none;
 }
 
 /* 嵌套内容块的视觉层次 */
 .content-block[data-parent-block] {
-    border-left: 2px solid rgba(0, 123, 255, 0.2);
-    padding-left: 4px;
-    margin-left: 2px;
+    border-left: none;
+    padding-left: 0;
+    margin-left: 0;
 }
 
-/* 内容块选中状态 */
+/* 内容块选中状态 - 去除蓝色方框 */
 .content-block.selected {
-    background-color: rgba(0, 123, 255, 0.1);
-    outline: 2px solid rgba(0, 123, 255, 0.5);
-    outline-offset: 1px;
+    background-color: transparent;
+    outline: none;
 }
 
-/* 内容块样式标识 - 用于调试和开发 */
+/* 内容块样式标识 - 禁用调试标识 */
 .content-block[data-content-block]::before {
-    content: attr(data-content-block);
-    position: absolute;
-    top: -18px;
-    left: 0;
-    font-size: 10px;
-    color: #666;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 1px 4px;
-    border-radius: 2px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    pointer-events: none;
-    z-index: 1000;
+    display: none;
 }
 
-/* 开发模式下显示内容块标识 */
+/* 开发模式下显示内容块标识 - 禁用 */
 .compose-container.debug-mode .content-block[data-content-block]::before {
-    opacity: 1;
+    display: none;
 }
 
 /* 内容块样式冲突解决 */
@@ -478,7 +465,6 @@
     display: flex;
     gap: 12px;
     padding-top: 20px;
-    border-top: 1px solid #e0e0e0;
     margin-top: 20px;
 }
 
@@ -618,24 +604,29 @@
     background: none;
     border: none;
     color: #666;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
     flex-shrink: 0;
+    position: relative;
+    z-index: 2;
+    margin-right: -5px;
 }
 
 .email-close-btn svg {
-    width: 100%;
-    height: 100%;
+    width: 14px;
+    height: 14px;
     fill: currentColor;
 }
 
 .email-close-btn:hover {
     color: #333;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
     transform: scale(1.1);
 }
 
@@ -649,6 +640,7 @@
 
 .email-header-bar.active .email-close-btn:hover {
     color: #1565c0;
+    background-color: rgba(25, 118, 210, 0.1);
 }
 
 /* 邮件详情样式 */
@@ -659,8 +651,11 @@
     padding: 20px;
     margin: 0 10px 10px 10px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .email-detail-header {
@@ -677,7 +672,11 @@
 }
 
 .email-detail-content {
-    line-height: 1.6;
+    line-height: 1.5;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
 
 .email-detail-content p {
@@ -806,6 +805,9 @@
 
 .email-content {
     line-height: 1.43;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
 }
 
 .email-content div:empty {
@@ -822,6 +824,20 @@
 
 .email-content div:last-child {
     margin-bottom: 0;
+}
+
+/* 确保邮件内容完整显示，不限制高度 */
+.email-content iframe {
+    min-height: 500px !important;
+    height: 100% !important;
+    overflow: visible !important;
+    flex: 1;
+}
+
+.email-text-content {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
 }
 
 /* 收件箱图标 */
@@ -978,7 +994,7 @@
 
 
 .email-items {
-    width: 80%;
+    width: 90%;
     overflow: hidden;
     padding-left: 10px;
     padding-right: 10px;
@@ -986,6 +1002,12 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    min-height: 0;
+    position: relative;
+    overflow: hidden;
 }
 
 /* 邮件列表项样式 */
@@ -1091,35 +1113,7 @@
     color: #999;
 }
 
-/* 邮件详情样式 */
-.email-detail {
-    padding: 20px;
-    height: auto;
-    min-height: 200px;
-    overflow-y: auto;
-}
 
-.email-detail-header {
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 16px;
-    margin-bottom: 20px;
-}
-
-.email-detail-header h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #333;
-    margin: 0;
-}
-
-.email-detail-content {
-    color: #666;
-}
-
-.email-detail-content p {
-    margin-bottom: 12px;
-    line-height: 1.5;
-}
 
 /* 空状态 */
 .empty-state {

@@ -7,6 +7,7 @@ const { sendMail } = require('./smtp');
 const { storeRawMail } = require('../storage/storage');
 const config = require('../../config/smtp.json');
 const users = require('../../user/user.json');
+const { EmailMappingManager } = require('../mapping/mapping');
 
 // 导入SSE管理器
 let sseManager = null;
@@ -26,6 +27,7 @@ class SMTPReceptionServer {
         this.parser = new MailParser();
         this.config = config;
         this.users = users;
+        this.mappingManager = new EmailMappingManager();
         this.server = null;
         this.tlsServer = null;
         this.connections = new Set();
@@ -129,8 +131,13 @@ class SMTPReceptionServer {
         // 发送欢迎消息
         this.sendResponse(socket, '220', `${this.config.domain} ESMTP Ready`);
 
-        socket.on('data', (data) => {
-            this.handleData(session, data.toString());
+        socket.on('data', async (data) => {
+            try {
+                await this.handleData(session, data.toString());
+            } catch (error) {
+                console.error('处理数据时出错:', error);
+                this.sendResponse(socket, '451', 'Requested action aborted: local error in processing');
+            }
         });
 
         socket.on('close', () => {
@@ -155,7 +162,7 @@ class SMTPReceptionServer {
      * @param {Object} session - 会话对象
      * @param {string} data - 接收到的数据
      */
-    handleData(session, data) {
+    async handleData(session, data) {
         // 处理DATA状态下的邮件内容
         if (session.state === 'DATA') {
             const dataStr = data.toString();
@@ -164,11 +171,11 @@ class SMTPReceptionServer {
             if (dataStr.includes('\r\n.\r\n')) {
                 const [content, rest] = dataStr.split('\r\n.\r\n', 2);
                 session.data += content;
-                this.processMailData(session);
+                await this.processMailData(session);
 
                 // 如果还有剩余数据,继续处理
                 if (rest) {
-                    this.handleData(session, rest);
+                    await this.handleData(session, rest);
                 }
             } else {
                 session.data += dataStr;
@@ -191,7 +198,7 @@ class SMTPReceptionServer {
             for (let line of lines) {
                 line = line.trim();
                 if (!line) continue;
-                this.handleCommand(session, line);
+                await this.handleCommand(session, line);
             }
         }
     }
@@ -201,7 +208,7 @@ class SMTPReceptionServer {
      * @param {Object} session - 会话对象
      * @param {string} line - 命令行
      */
-    handleCommand(session, line) {
+    async handleCommand(session, line) {
         const parts = line.split(' ');
         const command = parts[0].toUpperCase();
         const args = parts.slice(1).join(' ');
@@ -221,7 +228,7 @@ class SMTPReceptionServer {
                 this.handleMail(session, args);
                 break;
             case 'RCPT':
-                this.handleRcpt(session, args);
+                await this.handleRcpt(session, args);
                 break;
             case 'DATA':
                 this.handleDataCommand(session);
@@ -425,7 +432,8 @@ class SMTPReceptionServer {
      * @param {Object} session - 会话对象
      * @param {string} args - 参数
      */
-    handleRcpt(session, args) {
+    async handleRcpt(session, args) {
+        
         if (session.state !== 'MAIL' && session.state !== 'RCPT') {
             this.sendResponse(session.socket, '503', 'Bad sequence of commands');
             return;
@@ -446,6 +454,15 @@ class SMTPReceptionServer {
         if (!isLocalDomain && !canRelay) {
             this.sendResponse(session.socket, '550', 'Relay not permitted');
             return;
+        }
+
+        // 如果是本域用户，验证用户是否存在（包括主邮箱和映射邮箱）
+        if (isLocalDomain) {
+            const userExists = await this.mappingManager.validateUserExists(recipient);
+            if (!userExists) {
+                this.sendResponse(session.socket, '550', 'User not found');
+                return;
+            }
         }
 
         session.to.push(recipient);
@@ -480,6 +497,7 @@ class SMTPReceptionServer {
      * @param {Object} session - 会话对象
      */
     async processMailData(session) {
+        
         try {
             
             // 构建完整的邮件内容
@@ -510,38 +528,51 @@ class SMTPReceptionServer {
                     const isLocalDomain = recipient.endsWith(`@${this.config.domain}`);
                     
                     if (isLocalDomain) {
-                        // 本域用户：存储邮件到本地
-                        const recipientUser = this.users.find(u => u.email === recipient);
-                        if (recipientUser) {
-                            // 存储原始邮件数据
-                            await storeRawMail(recipientUser, rawMail, 'reception');
+                        const mainEmailAddress = await this.mappingManager.getMainEmailAddress(recipient);
+                        if (!mainEmailAddress) {
+                            console.error(`无法找到主邮箱地址: ${recipient}`);
+                            continue;
                         }
+
+                        // 获取用户ID
+                        const userId = await this.mappingManager.getUserIdByMainEmail(mainEmailAddress);
+                        if (!userId) {
+                            console.error(`无法找到用户ID: ${mainEmailAddress}`);
+                            continue;
+                        }
+
+                        // 查找对应的用户
+                        const recipientUser = this.users.find(u => u.id === userId);
+                        if (!recipientUser) {
+                            console.error(`无法找到用户: ${mainEmailAddress}`);
+                            continue;
+                        }
+
+                        // 存储原始邮件数据到主邮箱用户
+                        await storeRawMail(recipientUser, rawMail, 'reception');
                         
                         // 通过SSE推送新邮件通知给对应用户
                         if (sseManager) {
                             try {
-                                // 查找收件人用户ID
-                                const recipientUser = this.users.find(u => u.email === recipient);
-                                if (recipientUser) {
-                                    const notification = {
-                                        type: 'new_mail',
-                                        message: '您有新邮件',
-                                        data: {
-                                            from: session.from,
-                                            subject: parsedMail.subject || 'No Subject',
-                                            timestamp: Date.now(),
-                                            hasAttachments: parsedMail.attachments && parsedMail.attachments.length > 0
-                                        }
-                                    };
-                                    
-                                    sseManager.sendToUser(recipientUser.id, notification);
-                                }
+                                const notification = {
+                                    type: 'new_mail',
+                                    message: '您有新邮件',
+                                    data: {
+                                        from: session.from,
+                                        subject: parsedMail.subject || 'No Subject',
+                                        timestamp: Date.now(),
+                                        hasAttachments: parsedMail.attachments && parsedMail.attachments.length > 0,
+                                        originalRecipient: recipient, // 原始收件人（可能是映射邮箱）
+                                        mainRecipient: mainEmailAddress // 主邮箱
+                                    }
+                                };
+                                
+                                sseManager.sendToUser(userId, notification);
                             } catch (sseError) {
                                 console.error('推送SSE通知失败:', sseError.message);
                             }
                         }
                     } else {
-                        // 外部域：直接通过SMTP发送
                         const mailData = {
                             from: session.from,
                             to: [recipient],

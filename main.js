@@ -28,28 +28,50 @@ app.use(sessionMiddleware);
 const frontRouter = require('./jk/front/front');
 const verify = require('./jk/verify/verify.js');
 const a = require('./jk/web-mail/a.js');
+const b = require('./jk/web-mail/b.js');
+const c = require('./jk/web-mail/c.js');
 
 app.use('/', frontRouter);
 app.use('/', verify);
 app.use('/amail', a);
+app.use('/bmail', b);
+app.use('/cmail', c);
+
 
 // 邮件服务器
 const { smtpServer } = require('./jk/smtp/reception.js');
 let smtpServerInstance = smtpServer;
 
 // 启动HTTP服务器
-httpServer = http.createServer(app);
+httpServer = http.createServer((req, res) => {
+  if (HTTPS_ENABLED) {
+    // 如果HTTPS启用，将HTTP请求重定向到HTTPS
+    const httpsUrl = `https://${req.headers.host?.split(':')[0] || 'localhost'}:${HTTPS_PORT}${req.url}`;
+    res.writeHead(301, { Location: httpsUrl });
+    res.end();
+  } else {
+    // 如果HTTPS未启用，直接处理HTTP请求
+    app(req, res);
+  }
+});
 httpServer.listen(PORT, () => {
-  console.log(`HTTP服务器运行在端口 ${PORT}`);
+  if (HTTPS_ENABLED) {
+    console.log(`HTTP服务器运行在端口 ${PORT}，将重定向到HTTPS端口 ${HTTPS_PORT}`);
+  } else {
+    console.log(`HTTP服务器运行在端口 ${PORT}`);
+  }
 });
 
 // 启动HTTPS服务器
 if (HTTPS_ENABLED) {
   try {
     if (config.https.cert && config.https.key) {
+      const certPath = path.join(__dirname, 'certificate', config.https.cert);
+      const keyPath = path.join(__dirname, 'certificate', config.https.key);
+      
       const httpsOptions = {
-        cert: fs.readFileSync(config.https.cert),
-        key: fs.readFileSync(config.https.key)
+        cert: fs.readFileSync(certPath),
+        key: fs.readFileSync(keyPath)
       };
       
       httpsServer = https.createServer(httpsOptions, app);
@@ -57,7 +79,7 @@ if (HTTPS_ENABLED) {
         console.log(`HTTPS服务器运行在端口 ${HTTPS_PORT}`);
       });
     } else {
-      console.warn('HTTPS已启用但未提供证书文件路径');
+      console.warn('HTTPS已启用但未提供证书文件名称');
     }
   } catch (error) {
     console.error('启动HTTPS服务器失败:', error.message);

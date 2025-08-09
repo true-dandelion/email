@@ -15,6 +15,7 @@ const authRedirectMiddleware = (req, res, next) => {
 router.use('/ico', express.static(path.join(__dirname, '../../public/ico')))
 router.use('/login/assets', express.static(path.join(__dirname, '../../public/login/assets')))
 router.use('/email/assets', express.static(path.join(__dirname, '../../public/email/assets')))
+router.use('/storehouse', express.static(path.join(__dirname, '../../public/storehouse')))
 
 // 对敏感路径添加身份验证检查
 router.use('/email/*path', sessionMiddleware, authRedirectMiddleware)

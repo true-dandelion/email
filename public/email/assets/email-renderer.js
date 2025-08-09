@@ -137,14 +137,36 @@ class EmailRenderer {
     static renderEmailContent(email, emailId, downloadFunctionName, formattedTime = null) {
         const metaHtml = this.renderEmailMeta(email);
         
-        // 处理邮件内容中的换行符，将\n\n转换为<br><br>，将\n转换为<br>
-        // 并识别链接，显示为蓝色无下划线
-        const processedContent = (email.content || '')
-            .replace(/\n\n+/g, '<br><br>')  // 处理空行
-            .replace(/\n/g, '<br>')         // 处理普通换行
-            .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: blue; text-decoration: none;">$1</a>');  // 处理链接，在新页面打开且不包含HTML标签
+        let processedContent = '';
+        const content = email.content || email.html || email.text || '';
         
-        const contentHtml = `<div class="email-content">${processedContent}</div>`;
+        // 判断内容是否为HTML格式
+        const isHtmlContent = content.includes('<html') || content.includes('<body') || content.includes('<div') || content.includes('<table');
+        
+        if (isHtmlContent) {
+            // 如果是HTML内容，直接显示（确保外部资源如图片可以加载）
+            processedContent = content;
+        } else {
+            // 如果是纯文本内容，处理换行和链接
+            processedContent = content
+                .replace(/\n\n+/g, '<br><br>')  // 处理空行
+                .replace(/\n/g, '<br>')         // 处理普通换行
+                .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: blue; text-decoration: none;">$1</a>');  // 处理链接
+        }
+        
+        // 创建安全的iframe来渲染HTML内容，允许外部图片加载
+        const contentHtml = `
+            <div class="email-content">
+                ${isHtmlContent ? 
+                    `<iframe 
+                        srcdoc="${processedContent.replace(/"/g, '&quot;')}" 
+                        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation allow-popups-to-escape-sandbox"
+                        style="width: 100%; border: none;"
+                        onload="this.style.height = this.contentDocument.body.scrollHeight + 'px';"
+                        referrerpolicy="no-referrer">
+                    </iframe>`
+                : `<div class="email-text-content">${processedContent}</div>`}
+            </div>`;
         
         // 如果有附件，添加5个空行和分隔符
         const spacingHtml = (email.attachments && email.attachments.length > 0) ? 

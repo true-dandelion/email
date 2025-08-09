@@ -141,10 +141,10 @@ a.post('/send', authMiddleware, async(req, res) => {
         const bcc = req.body.bcc || [];
 
         // 验证必要参数
-        if (!to || !subject || !content) {
+        if (!to) {
             return res.status(400).json({
                 success: false,
-                message: '收件人、主题和内容为必填项'
+                message: '收件人为必填项'
             });
         }
 
@@ -186,6 +186,9 @@ a.post('/send', authMiddleware, async(req, res) => {
         const ccArray = Array.isArray(cc) ? cc : (cc ? [cc] : []);
         const bccArray = Array.isArray(bcc) ? bcc : (bcc ? [bcc] : []);
 
+        // 检查内容是否包含HTML标签（如span）
+        const containsHtml = /<(\w+)[^>]*>/i.test(content);
+        
         // 构建邮件选项
         const mailOptions = {
             from: {
@@ -194,10 +197,16 @@ a.post('/send', authMiddleware, async(req, res) => {
             },
             to: toArray.map(addr => typeof addr === 'string' ? { address: addr } : addr),
             subject: subject,
-            text: content,
             cc: ccArray.map(addr => typeof addr === 'string' ? { address: addr } : addr),
             bcc: bccArray.map(addr => typeof addr === 'string' ? { address: addr } : addr)
         };
+
+        // 根据内容类型设置text或html
+        if (containsHtml) {
+            mailOptions.html = content;
+        } else {
+            mailOptions.text = content;
+        }
 
         // 如果有附件，添加到邮件选项中
         if (annex && annexname) {

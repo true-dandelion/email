@@ -388,6 +388,9 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    height: 100%;
+    min-height: 0;
+    flex: 0 0 auto;
 }
 
 /* 导航头部 - 固定不滚动 */
@@ -415,12 +418,68 @@ body {
     flex-direction: column;
     overflow-y: auto;
     overflow-x: hidden;
+    max-height: 100%;
+    padding: 0 0 50px 0;
+    scrollbar-width: 0;
 }
 
-/* 自定义滚动条样式 */
-.navigation-content::-webkit-scrollbar {
-    width: 6px;
+/* 鼠标悬停时显示滚动条 */
+.navigation-content:hover {
+    scrollbar-width: thin; /* Firefox */
 }
+
+/* 自定义滚动条样式 - 默认状态（隐藏） */
+.navigation-content::-webkit-scrollbar {
+    width: 0; /* Chrome/Safari/Edge 初始宽度为0，隐藏滚动条 */
+    transition: width 0.2s ease; /* 宽度变化动画 */
+}
+
+/* 鼠标悬停时显示滚动条 */
+.navigation-content:hover::-webkit-scrollbar {
+    width: 6px; /* 显示滚动条，宽度6px */
+}
+
+/* 滚动条轨道样式 */
+.navigation-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+/* 滚动条滑块样式 */
+.navigation-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+
+/* 鼠标悬停在滑块上时的样式 */
+.navigation-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* navigation中的空状态样式 */
+.navigation-content .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #666;
+    text-align: center;
+}
+
+.navigation-content .empty-text {
+    font-size: 16px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.navigation-content .empty-subtext {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
 
 .navigation-content::-webkit-scrollbar-track {
     background: #f1f1f1;

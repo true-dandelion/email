@@ -5,4 +5,9 @@ logs
 # User specified directories to ignore
 node_modules/
 certificate/
+storage/
 log/
+
+
+# Ignore the .gitignore file itself
+.gitignore

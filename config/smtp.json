@@ -1,6 +1,6 @@
 {
   "port": 25,
-  "domain" : "shaoxin.top",
+  "domain": "shaoxin.top",
   "TLS": {
     "enabled": false,
     "port": 587,

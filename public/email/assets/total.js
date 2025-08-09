@@ -1,38 +1,47 @@
 // 退出登录和切换账户功能
 document.addEventListener('DOMContentLoaded', function() {
-    // 解析JWT token获取邮件地址
-    function parseJWT(token) {
+    // 存储邮件地址的函数
+    let baddress = null;
+
+    // 从接口获取邮件地址
+    async function getEmailFromAPI() {
         try {
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
-            return JSON.parse(jsonPayload);
-        } catch (e) {
+            const response = await fetch('/bmail/eaddress', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include'
+            });
+            
+            if (!response.ok) {
+                throw new Error('获取邮件地址失败');
+            }
+            
+            const result = await response.json();
+            if (result.success && result.data && result.data.email) {
+                baddress = result.data.email;
+                return result.data.email;
+            } else {
+                throw new Error('邮件地址格式错误');
+            }
+        } catch (error) {
+            console.error('获取邮件地址错误:', error);
             return null;
         }
     }
 
-    // 从cookie获取authToken并解析邮件地址
-    function getEmailFromCookie() {
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            const [name, value] = cookie.trim().split('=');
-            if (name === 'authToken') {
-                const decodedToken = parseJWT(value);
-                return decodedToken ? decodedToken.email : null;
-            }
+    // 设置账户显示名称
+    async function initializeEmail() {
+        const email = await getEmailFromAPI();
+        const usernameElement = document.querySelector('.username');
+        if (usernameElement && email) {
+            usernameElement.textContent = email;
         }
-        return null;
     }
 
-    // 设置账户显示名称
-    const email = getEmailFromCookie();
-    const usernameElement = document.querySelector('.username');
-    if (usernameElement && email) {
-        usernameElement.textContent = email;
-    }
+    // 初始化邮件地址
+    initializeEmail();
 
     // 获取下拉菜单元素
     const dropdownMenu = document.getElementById('dropdownMenu');

@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const { MailParser } = require('../parse/parse');
 const config = require('../../config/smtp.json');
 const users = require('../../user/user.json');
+const { updateSendStatus, startSending } = require('../Inquire/Inquire');
 
 /**
  * SMTP发送模块
@@ -43,8 +44,15 @@ class SMTPSender {
                 console.warn('邮件安全警告:', securityCheck.warnings);
             }
 
+            // 收集所有收件人（包括TO、CC、BCC）
+            const allRecipients = [
+                ...parsedMail.to,
+                ...(parsedMail.cc || []),
+                ...(parsedMail.bcc || [])
+            ];
+            
             // 分离本地和外部收件人
-            const { localRecipients, externalRecipients } = this.categorizeRecipients(parsedMail.to);
+            const { localRecipients, externalRecipients } = this.categorizeRecipients(allRecipients);
             
             const results = {
                 messageId: parsedMail.messageId || this.generateMessageId(),
@@ -89,8 +97,29 @@ class SMTPSender {
                 }
             }
 
-            // 存储发送记录
-            await this.storeSentMail(rawMail, parsedMail.from.address);
+            // 存储发送记录（包含BCC信息）
+            const mailWithBcc = { ...parsedMail, bcc: parsedMail.bcc || [] };
+            const rawMailWithBcc = this.buildRawMail(mailWithBcc, true);
+            const filename = await this.storeSentMail(rawMailWithBcc, parsedMail.from.address);
+
+            // 记录外部收件人的发送状态
+            const senderUserId = this.getUserIdByEmail(parsedMail.from.address);
+            if (senderUserId) {
+                // 先为每个外部收件人设置正在发送状态
+                for (const recipient of externalRecipients) {
+                    await startSending(senderUserId, results.messageId, filename, recipient.address);
+                }
+                
+                // 记录成功的发送
+                for (const delivery of results.externalDelivery) {
+                    await updateSendStatus(senderUserId, results.messageId, filename, delivery.recipient, 'success');
+                }
+                
+                // 记录失败的发送
+                for (const error of results.errors.filter(e => e.type === 'external')) {
+                    await updateSendStatus(senderUserId, results.messageId, filename, error.recipient, 'failed', error.error);
+                }
+            }
 
             return results;
         } catch (error) {
@@ -104,7 +133,7 @@ class SMTPSender {
      * @param {Object} mailData - 邮件数据
      * @returns {string} 原始邮件内容
      */
-    buildRawMail(mailData) {
+    buildRawMail(mailData, includeBcc = false) {
         const headers = [];
         
         headers.push(`Message-ID: <${this.generateMessageId()}>`);
@@ -116,6 +145,11 @@ class SMTPSender {
             headers.push(`Cc: ${mailData.cc.map(addr => this.formatAddress(addr)).join(', ')}`);
         }
         
+        // BCC只在存储已发送邮件时包含，不在实际发送的邮件头中显示
+        if (includeBcc && mailData.bcc && mailData.bcc.length > 0) {
+            headers.push(`Bcc: ${mailData.bcc.map(addr => this.formatAddress(addr)).join(', ')}`);
+        }
+        
         headers.push(`Subject: ${mailData.subject || ''}`);
         headers.push(`MIME-Version: 1.0`);
         
@@ -124,9 +158,15 @@ class SMTPSender {
             headers.push(`Content-Type: multipart/mixed; boundary="${boundary}"`);
             
             let body = `\r\n--${boundary}\r\n`;
-            body += `Content-Type: text/plain; charset=utf-8\r\n`;
+            
+            // 根据内容类型设置相应的Content-Type
+            if (mailData.html) {
+                body += `Content-Type: text/html; charset=utf-8\r\n`;
+            } else {
+                body += `Content-Type: text/plain; charset=utf-8\r\n`;
+            }
             body += `Content-Transfer-Encoding: 8bit\r\n\r\n`;
-            body += `${mailData.text || ''}\r\n`;
+            body += `${mailData.html || mailData.text || ''}\r\n`;
             
             // 添加附件
             for (const attachment of mailData.attachments) {
@@ -143,9 +183,14 @@ class SMTPSender {
             body += `--${boundary}--\r\n`;
             return headers.join('\r\n') + '\r\n' + body;
         } else {
-            headers.push(`Content-Type: text/plain; charset=utf-8`);
+            // 根据内容类型设置相应的Content-Type
+            if (mailData.html) {
+                headers.push(`Content-Type: text/html; charset=utf-8`);
+            } else {
+                headers.push(`Content-Type: text/plain; charset=utf-8`);
+            }
             headers.push(`Content-Transfer-Encoding: 8bit`);
-            return headers.join('\r\n') + '\r\n\r\n' + (mailData.text || '');
+            return headers.join('\r\n') + '\r\n\r\n' + (mailData.html || mailData.text || '');
         }
     }
 
@@ -154,6 +199,7 @@ class SMTPSender {
      * @param {string} email - 邮箱地址
      * @returns {string|null} 用户ID
      */
+    // 在SMTPSender类中添加新方法用于获取用户ID
     getUserIdByEmail(email) {
         const user = users.find(u => u.email === email);
         return user ? user.id.toString() : null;
@@ -237,14 +283,17 @@ class SMTPSender {
                         step++;
                     }
                 } else if (response.startsWith('354') && step === 4) {
-                    // 发送邮件内容
-                    const rawMail = this.buildRawMail({
+                    // 发送邮件内容（不包含BCC信息）
+                    const mailData = {
                         from: parsedMail.from,
-                        to: [recipient],
+                        to: parsedMail.to,
+                        cc: parsedMail.cc || [],
                         subject: parsedMail.subject,
                         text: parsedMail.text,
+                        html: parsedMail.html,
                         attachments: parsedMail.attachments
-                    });
+                    };
+                    const rawMail = this.buildRawMail(mailData);
                     client.write(rawMail + '\r\n.\r\n');
                 } else if (response.startsWith('250') && step === 4) {
                     client.write('QUIT\r\n');
@@ -312,6 +361,8 @@ class SMTPSender {
         
         // 存储原始邮件数据
         await fs.writeFile(filePath, rawMail);
+        
+        return filename;
     }
 
     /**
