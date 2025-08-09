@@ -3,7 +3,7 @@
   "https": {
     "enabled": true,
     "port": 443,
-    "cert": "www.shaoxin.top.pem",
-    "key": "www.shaoxin.top.key"
+    "cert": "",
+    "key": ""
   }
 }
