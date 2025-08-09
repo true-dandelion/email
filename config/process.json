@@ -1,7 +1,7 @@
 {
   "port": 80,
   "https": {
-    "enabled": true,
+    "enabled": false,
     "port": 443,
     "cert": "",
     "key": ""
