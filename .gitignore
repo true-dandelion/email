@@ -1,7 +1,3 @@
-# Logs
-logs
-*.log
-
 # User specified directories to ignore
 node_modules/
 certificate/
