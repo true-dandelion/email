@@ -1,17 +1,1 @@
-{
-  "mainEmails": [
-    {
-      "id": "main_9UuHXf89Z3H5ZQbIX7TuXIdFWHGVD7yV",
-      "address": "delion@shaoxin.top",
-      "status": "active"
-    }
-  ],
-  "mappingEmails": [
-    {
-      "id": "map_5lAozyypab9qKa16UXXisPOrqfyDG6gN",
-      "address": "a@shaoxin.top",
-      "mappedTo": "main_9UuHXf89Z3H5ZQbIX7TuXIdFWHGVD7yV",
-      "status": "active"
-    }
-  ]
-}
+
