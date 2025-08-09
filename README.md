@@ -14,6 +14,10 @@ npm install
 node main.js
 ```
 
+## 初始登录账户密码
+- `账户：admin@shaoxin.top`
+- `密码：admin@shaoxin.top`
+
 ## 配置指南
 
 需要配置以下三个配置文件：
@@ -82,4 +86,5 @@ node main.js
 - SMTP目前仅支持非加密连接（端口25）
 - HTTPS需要有效的SSL证书文件
 - 邮件规则中的域名需要包含@符号
+
 
