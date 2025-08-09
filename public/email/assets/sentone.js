@@ -135,7 +135,8 @@ class SentEmailManager {
             const data = await response.json();
             
             if (data.success && data.data) {
-                this.displayEmailDetails(data.data);
+                // 使用标签系统显示邮件详情
+                this.openEmailInTab(emailId, data.data);
             } else {
                 console.error('获取邮件详情失败:', data.message);
             }
@@ -145,16 +146,47 @@ class SentEmailManager {
     }
 
     closeEmailTab(emailId) {
-        // 清空邮件详情显示
-        const emailItems = document.getElementById('emailItems');
-        if (emailItems) {
-            emailItems.innerHTML = '';
+        this.emailTabs.delete(emailId);
+        
+        if (this.currentTabId === emailId) {
+            this.currentTabId = null;
+            
+            if (this.emailTabs.size > 0) {
+                const firstTabId = this.emailTabs.keys().next().value;
+                this.switchEmailTab(firstTabId);
+            } else {
+                const emailItems = document.getElementById('emailItems');
+                if (emailItems) {
+                    emailItems.innerHTML = '<div class="no-email-selected">请选择一封邮件</div>';
+                }
+                
+                // 更新URL，移除邮件ID参数
+                const url = new URL(window.location);
+                url.searchParams.delete('m');
+                window.history.pushState({}, '', url);
+            }
         }
         
-        // 更新URL，移除邮件ID参数
-        const url = new URL(window.location);
-        url.searchParams.delete('m');
-        window.history.pushState({}, '', url);
+        this.renderEmailTabs(Array.from(this.emailTabs.values()));
+    }
+    
+    openEmailInTab(emailId, emailData) {
+        // 如果标签已存在，直接切换到该标签
+        if (this.emailTabs.has(emailId)) {
+            this.switchEmailTab(emailId);
+            return;
+        }
+        
+        // 将邮件数据添加到标签系统中
+        this.emailTabs.set(emailId, emailData);
+        this.currentTabId = emailId;
+        
+        // 更新URL参数
+        this.updateUrlParams(emailId);
+        
+        // 渲染标签和邮件详情
+        this.renderEmailTabs(Array.from(this.emailTabs.values()));
+        this.displayEmailDetails(emailData);
     }
     
     displayEmailDetails(emailData) {
@@ -315,6 +347,9 @@ class SentEmailManager {
     switchEmailTab(tabId) {
         this.currentTabId = tabId;
         
+        // 更新URL参数
+        this.updateUrlParams(tabId);
+        
         document.querySelectorAll('.email-tab').forEach(tab => {
             tab.classList.remove('active');
         });
@@ -330,20 +365,24 @@ class SentEmailManager {
         }
     }
 
-    closeEmailTab(tabId) {
-        this.emailTabs.delete(tabId);
+    closeEmailTab(emailId) {
+        this.emailTabs.delete(emailId);
         
-        if (this.currentTabId === tabId) {
+        if (this.currentTabId === emailId) {
             this.currentTabId = null;
             
             if (this.emailTabs.size > 0) {
                 const firstTabId = this.emailTabs.keys().next().value;
                 this.switchEmailTab(firstTabId);
             } else {
-                const emailDetailContainer = document.getElementById('emailDetailContainer');
-                if (emailDetailContainer) {
-                    emailDetailContainer.innerHTML = '<div class="no-email-selected">请选择一封邮件</div>';
+                const emailItems = document.getElementById('emailItems');
+                if (emailItems) {
+                    emailItems.innerHTML = '';
                 }
+                // 清除URL参数
+                const url = new URL(window.location);
+                url.searchParams.delete('m');
+                window.history.pushState({}, '', url);
             }
         }
         
@@ -365,10 +404,8 @@ class SentEmailManager {
             const data = await response.json();
             
             if (data.success && data.data) {
-                // 更新URL参数以防止刷新后丢失
-                this.updateUrlParams(emailId);
-                // 直接显示邮件详情，不使用标签系统
-                this.displayEmailDetails(data.data);
+                // 使用标签系统显示邮件详情
+                this.openEmailInTab(emailId, data.data);
             } else {
                 console.error('加载邮件失败:', data.message || '未知错误');
             }
